@@ -1,0 +1,8 @@
+component Todo:
+    $task = ""
+    
+    view:
+        div .container:
+            h1: "Viand Todo"
+            input(bind: $task)
+            button "Add" -> console.log($task)

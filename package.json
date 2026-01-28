@@ -1,0 +1,17 @@
+{
+  "name": "viand-monorepo",
+  "private": true,
+  "description": "The Viand Programming Language ecosystem",
+  "workspaces": [
+    "packages/*",
+    "editors/*"
+  ],
+  "scripts": {
+    "dev": "node packages/cli/bin/viand.js dev",
+    "build:compiler": "npm run build -w @viand/compiler",
+    "test": "npm test --workspaces"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
