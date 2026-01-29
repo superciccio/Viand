@@ -17,7 +17,7 @@ This document tracks the strategic development milestones for the Viand language
 **Goal:** Professional-grade stability and developer experience.
 - [x] **Acorn Integration:** Real JS parsing for logic and expressions.
 - [x] **Vite Plugin:** Native `.viand` support (in-memory compilation).
-- [ ] **TypeScript Refactor:** Port the compiler to TS.
+- [x] **TypeScript Refactor:** Port the compiler to TS.
 - [ ] **Error Mapping:** Map Svelte errors back to Viand line numbers.
 
 ## 🚩 Milestone 6: Sibling Resource Awareness (The "Dream" Logic)

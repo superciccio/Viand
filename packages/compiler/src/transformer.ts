@@ -43,26 +43,31 @@ export function cleanLogic(code: string): string {
 
 function cleanViandText(text: string): string {
     if (typeof text !== 'string') return text;
-    return text.trim()
-        .replace(/["']\s*\+\s*/g, '').replace(/\+\s*["']/g, '').replace(/["']/g, '')
-        .replace(/\$([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_.]+)*)/g, '{$1}');
+    let cleaned = text.trim();
+    // Handle concatenation like "Welcome " + $user
+    cleaned = cleaned.replace(/["']\s*\+\s*/g, '').replace(/\+\s*["']/g, '').replace(/["']/g, '');         
+    // Interpolate variables: $user -> {user}
+    cleaned = cleaned.replace(/\$([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_.]+)*)/g, '{$1}');
+    return cleaned;
 }
 
 function findSplitColon(text: string): number {
     let depth = 0, inQuote = false, quoteChar: string | null = null;
     for (let i = 0; i < text.length; i++) {
         const char = text[i];
-        if (inQuote) { if (char === quoteChar) inQuote = false; }
-        else if (char === '"' || char === "'") { inQuote = true; quoteChar = char; }
-        else if (char === '(') depth++;
-        else if (char === ')') depth--;
-        else if (char === ':' && depth === 0) return i;
+        if (inQuote) { if (char === quoteChar) inQuote = false; } 
+        else {
+            if (char === '"' || char === "'") { inQuote = true; quoteChar = char; }
+            else if (char === '(') depth++;
+            else if (char === ')') depth--;
+            else if (char === ':' && depth === 0) return i;
+        }
     }
     return -1;
 }
 
 /**
- * 2. MANIFEST BUILDER
+ * PHASE 1: BUILDER (Tokens -> Manifest)
  */
 export function buildManifest(tree: Token[], lexerErrors: string[]) {
     const manifest: ComponentManifest = {
@@ -94,7 +99,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[]) {
                 let type = 'any', value = 'undefined';
                 const tm = trimmed.match(/:\s*([a-z0-9_[\]]+)/i); if (tm) type = tm[1];
                 const vm = trimmed.match(/=\s*(.*)$/); if (vm) value = vm[1].trim();
-                manifest.props.push({ id, type, value });
+                manifest.props.push({ id, type, value, line: token.line });
             }
             continue;
         }
@@ -108,7 +113,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[]) {
                     let type = 'any', value = 'undefined';
                     const tm = trimmed.match(/:\s*([a-z0-9_[\]]+)/i); if (tm) type = tm[1];
                     const vm = trimmed.match(/=\s*(.*)$/); if (vm) value = vm[1].trim();
-                    manifest.state.push({ id, type, value });
+                    manifest.state.push({ id, type, value, line: token.line });
                 }
             }
             continue;
@@ -121,7 +126,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[]) {
         if (token.type === 'FUNCTION_ACTION') {
             const m = trimmed.match(/fn\s+(\w+)\s*\((.*?)\)/);
             if (m) {
-                const f: ManifestFunction = { type: 'function', name: m[1], params: m[2].split(',').map(p=>p.trim()).filter(p=>p), body: [], depth: token.depth };
+                const f: ManifestFunction = { type: 'function', name: m[1], params: m[2].split(',').map(p=>p.trim()).filter(p=>p), body: [], depth: token.depth, line: token.line };
                 manifest.functions.push(f);
                 stack.push(f);
             }
@@ -134,7 +139,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[]) {
 
         if (context.type === 'style' || context.type === 'style-rule') {
             if (trimmed.endsWith(':')) {
-                const rule = { selector: trimmed.slice(0, -1), rules: [] };
+                const rule: ManifestStyle = { selector: trimmed.slice(0, -1), rules: [], line: token.line };
                 manifest.styles.push(rule);
                 stack.push({ type: 'style-rule', rule, depth: token.depth });
             } else {
@@ -146,7 +151,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[]) {
 
         if (context.type === 'function' || context.type === 'js-block') {
             if (token.type === 'CONTROL_FLOW' && trimmed.startsWith('if ')) {
-                const b: ManifestFunction = { type: 'js-block', body: [trimmed], depth: token.depth };
+                const b: ManifestFunction = { type: 'js-block', body: [trimmed], depth: token.depth, line: token.line };
                 context.body.push(b);
                 stack.push(b);
             } else { context.body.push(token.content); }
@@ -157,12 +162,12 @@ export function buildManifest(tree: Token[], lexerErrors: string[]) {
             if (trimmed.startsWith('each ')) {
                 const m = trimmed.match(/each\s+\$([a-z_]\w*)\s+in\s+\$([a-z_]\w*)/i);
                 if (m) {
-                    const node: ViewNode = { type: 'each', list: m[2], item: m[1], children: [] };
+                    const node: ViewNode = { type: 'each', list: m[2], item: m[1], children: [], line: token.line };
                     context.children.push(node);
                     stack.push({ type: 'view-node', children: node.children, depth: token.depth });
                 }
             } else if (trimmed.startsWith('match ')) {
-                const node: ViewNode = { type: 'match', expression: trimmed.replace('match ', '').replace(':', '').trim(), children: [], cases: [] };
+                const node: ViewNode = { type: 'match', expression: trimmed.replace('match ', '').replace(':', '').trim(), children: [], cases: [], line: token.line };
                 context.children.push(node);
                 stack.push({ type: 'match-root', node, depth: token.depth });
             } else if (trimmed.startsWith('case ') && context.type === 'match-root') {
@@ -174,13 +179,13 @@ export function buildManifest(tree: Token[], lexerErrors: string[]) {
                 context.node.defaultCase = d;
                 stack.push({ type: 'view-node', children: d.children, depth: token.depth });
             } else if (trimmed.startsWith('if ')) {
-                const node: ViewNode = { type: 'if', condition: trimmed.replace('if ', '').replace(':', '').trim(), children: [] };
+                const node: ViewNode = { type: 'if', condition: trimmed.replace('if ', '').replace(':', '').trim(), children: [], line: token.line };
                 context.children.push(node);
                 stack.push({ type: 'view-node', children: node.children, depth: token.depth, node });
             } else if (trimmed.startsWith('else')) {
                 const last = context.children[context.children.length - 1];
                 if (last && last.type === 'if') {
-                    const node: ViewNode = { type: 'if', condition: trimmed.startsWith('else if ') ? trimmed.replace('else if ', '').replace(':', '').trim() : 'true', children: [] };
+                    const node: ViewNode = { type: 'if', condition: trimmed.startsWith('else if ') ? trimmed.replace('else if ', '').replace(':', '').trim() : 'true', children: [], line: token.line };
                     last.alternate = node;
                     stack.push({ type: 'view-node', children: node.children, depth: token.depth });
                 }
@@ -225,15 +230,15 @@ export function buildManifest(tree: Token[], lexerErrors: string[]) {
                     else attrs[`on:${m[1].replace(/\./g, '|')}`] = m[2];
                 } else attrs['on:click'] = eventSide.replace('()', '').trim();
             }
-            const node: ViewNode = { type: 'element', tag: actualTag, attrs, children: [] };
+            const node: ViewNode = { type: 'element', tag: actualTag, attrs, children: [], line: token.line };
             context.children.push(node);
-            if (inline) node.children.push({ type: 'text', content: inline, children: [] });
+            if (inline) node.children.push({ type: 'text', content: inline, children: [], line: token.line });
             else if (trimmed.endsWith(':')) stack.push({ type: 'view-node', children: node.children, depth: token.depth });
             continue;
         }
 
         if (token.type === 'EXPRESSION' && token.depth > 0 && trimmed !== 'view:') {
-            context.children.push({ type: 'text', content: trimmed, children: [] });
+            context.children.push({ type: 'text', content: trimmed, children: [], line: token.line });
         }
     }
     return { manifest, reports: [] as string[] };
@@ -278,14 +283,12 @@ export function generateSvelte5(manifest: ComponentManifest): string {
             const attrParts = Object.entries(node.attrs || {}).map(([k, v]) => {
                 let val;
                 let attrName = k;
-                
-                // Svelte 5: on:click -> onclick
                 if (k.startsWith('on:')) {
                     attrName = k.replace('on:', 'on');
                     val = `{${v}}`;
                 } else if (v.startsWith('$')) {
                     val = `{${v.slice(1)}}`;
-                } else if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+                } else if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'" ) && v.endsWith("'" ))) {
                     val = v;
                 } else {
                     val = `"${v}"`;
@@ -299,16 +302,19 @@ ${node.children.map(c => renderNode(c, indent + "  ")).join('')}${indent}</${nod
 `;
         }
         if (node.type === 'each') return `${indent}{#each ${cleanLogic(node.list!)} as ${cleanLogic(node.item!)}}
-${node.children.map(c => renderNode(c, indent + "  ")).join('')}${indent}{/each}\n`;
+${node.children.map(c => renderNode(c, indent + "  ")).join('')}${indent}{/each}
+`;
         if (node.type === 'if') {
             let out = `${indent}{#if ${cleanLogic(node.condition!)}}
 ${node.children.map(c => renderNode(c, indent + "  ")).join('')}`;
             if (node.alternate) {
-                if (node.alternate.condition === 'true') out += `${indent}{:else}\n${node.alternate.children.map(c => renderNode(c, indent + "  ")).join('')}`; 
+                if (node.alternate.condition === 'true') out += `${indent}{:else}
+${node.alternate.children.map(c => renderNode(c, indent + "  ")).join('')}`; 
                 else out += `${indent}{:else if ${cleanLogic(node.alternate.condition!)}}
 ${node.alternate.children.map(c => renderNode(c, indent + "  ")).join('')}`;
             }
-            return out + `${indent}{/if}\n`;
+            return out + `${indent}{/if}
+`;
         }
         if (node.type === 'match') {
             const e = cleanLogic(node.expression!);
@@ -317,8 +323,10 @@ ${node.alternate.children.map(c => renderNode(c, indent + "  ")).join('')}`;
                 const header = i === 0 ? `{#if ${e} === ${c.condition}}` : `{:else if ${e} === ${c.condition}}`;
                 out += `${indent}${header}\n${c.children.map(child => renderNode(child, indent + "  ")).join('')}`;
             });
-            if (node.defaultCase) out += `${indent}{:else}\n${node.defaultCase.children.map(child => renderNode(child, indent + "  ")).join('')}`;
-            return out + `${indent}{/if}\n`;
+            if (node.defaultCase) out += `${indent}{:else}
+${node.defaultCase.children.map(child => renderNode(child, indent + "  ")).join('')}`;
+            return out + `${indent}{/if}
+`;
         }
         return "";
     };
@@ -327,11 +335,14 @@ ${node.alternate.children.map(c => renderNode(c, indent + "  ")).join('')}`;
     if (manifest.styles.length > 0) {
         style = `\n<style>\n`;
         manifest.styles.forEach(s => {
-            style += `  ${s.selector} {\n`;
+            style += `  ${s.selector} {
+`;
             s.rules.forEach(r => style += `    ${r};\n`);
-            style += `  }\n`;
+            style += `  }
+`;
         });
-        style += `</style>\n`;
+        style += `</style>
+`;
     }
     return script + finalView + style;
 }

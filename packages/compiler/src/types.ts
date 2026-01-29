@@ -24,6 +24,7 @@ export interface ManifestProp {
     id: string;
     type: string;
     value: string;
+    line: number;
 }
 
 export interface ManifestFunction {
@@ -32,11 +33,13 @@ export interface ManifestFunction {
     params?: string[];
     body: (string | ManifestFunction)[];
     depth: number;
+    line: number;
 }
 
 export interface ManifestStyle {
     selector: string;
     rules: string[];
+    line: number;
 }
 
 export type ViewNodeType = 'element' | 'text' | 'if' | 'each' | 'match';
@@ -54,6 +57,7 @@ export interface ViewNode {
     expression?: string;
     cases?: { condition: string, children: ViewNode[] }[];
     defaultCase?: { children: ViewNode[] };
+    line: number;
 }
 
 export interface ComponentManifest {
