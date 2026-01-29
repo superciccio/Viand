@@ -1,4 +1,5 @@
 import { createComponentManifest, ViewNode } from './manifest.js';
+import { cleanLogic } from './logic_processor.js';
 
 /**
  * Helper to strip quotes and convert $var to {var} for Svelte prose
@@ -9,25 +10,8 @@ function cleanViandText(text) {
     // Handle concatenation like "Welcome " + $user
     cleaned = cleaned.replace(/["']\s*\+\s*/g, '').replace(/\+\s*["']/g, '').replace(/["']/g, '');         
     // Interpolate variables: $user -> {user}
-    cleaned = cleaned.replace(/\$([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_.]+)*)/g, '{$1}');
+    cleaned = cleaned.replace(/\$([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)*)/g, '{$1}');
     return cleaned;
-}
-
-/**
- * Helper to strip $ for logic expressions (if/each/js)
- * PROTECTS Svelte 5 Runes ($state, $derived, etc)
- */
-function cleanLogicExpression(text) {
-    if (typeof text !== 'string') return text;
-    const runes = ['state', 'derived', 'props', 'effect', 'inspect', 'host'];
-    // Match $ followed by a variable name (including dots for property access)
-    return text.replace(/\$([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_.]+)*)/g, (match, p1) => {
-        // If the variable name is a Svelte Rune, keep the $
-        const root = p1.split('.')[0];
-        if (runes.includes(root)) return match;
-        // Otherwise, strip the $
-        return p1;
-    });
 }
 
 function findSplitColon(text) {
@@ -288,7 +272,7 @@ function generateSvelte5(manifest) {
     });
 
     manifest.reactive.forEach(r => {
-        script += `  let ${r.id} = $derived(${cleanLogicExpression(r.expression)});
+        script += `  let ${r.id} = $derived(${cleanLogic(r.expression)});
 `;
     });
 
@@ -298,11 +282,11 @@ function generateSvelte5(manifest) {
 `;
         const renderBody = (body, indent = "    ") => {
             return body.map(line => {
-                if (typeof line === 'string') return `${indent}${cleanLogicExpression(line)};\n`;
+                if (typeof line === 'string') return `${indent}${cleanLogic(line)};\n`;
                 // Transform Viand 'if cond:' -> JS 'if (cond) {'
                 const rawHeader = line.body[0].trim();
                 const jsHeader = rawHeader.replace(/^if\s+(.*):$/, 'if ($1) {');
-                const header = cleanLogicExpression(jsHeader);
+                const header = cleanLogic(jsHeader);
                 return `${indent}${header}\n${renderBody(line.body.slice(1), indent + "  ")}${indent}}\n`;
             }).join('');
         };
@@ -338,20 +322,20 @@ ${node.children.map(c => renderNode(c, indent + "  ")).join('')}${indent}</${nod
         }
 
         if (node.type === 'each') {
-            const list = cleanLogicExpression(node.list);
-            const item = cleanLogicExpression(node.item);
+            const list = cleanLogic(node.list);
+            const item = cleanLogic(node.item);
             return `${indent}{#each ${list} as ${item}}
 ${node.children.map(c => renderNode(c, indent + "  ")).join('')}${indent}{/each}
 `;
         }
 
         if (node.type === 'if') {
-            let out = `${indent}{#if ${cleanLogicExpression(node.condition)}}
+            let out = `${indent}{#if ${cleanLogic(node.condition)}}
 ${node.children.map(c => renderNode(c, indent + "  ")).join('')}`;
             if (node.alternate) {
                 if (node.alternate.condition === 'true') out += `${indent}{:else}
 ${node.alternate.children.map(c => renderNode(c, indent + "  ")).join('')}`;
-                else out += `${indent}{:else if ${cleanLogicExpression(node.alternate.condition)}}
+                else out += `${indent}{:else if ${cleanLogic(node.alternate.condition)}}
 ${node.alternate.children.map(c => renderNode(c, indent + "  ")).join('')}`;
             }
             return out + `${indent}{/if}
@@ -359,7 +343,7 @@ ${node.alternate.children.map(c => renderNode(c, indent + "  ")).join('')}`;
         }
 
         if (node.type === 'match') {
-            const expr = cleanLogicExpression(node.expression);
+            const expr = cleanLogic(node.expression);
             let out = "";
             node.cases.forEach((c, i) => {
                 const header = i === 0 ? `{#if ${expr} === ${c.condition}}` : `{:else if ${expr} === ${c.condition}}`;
