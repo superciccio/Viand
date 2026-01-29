@@ -4,6 +4,7 @@ export function identifyToken(content: string): TokenType {
     const trimmed = content.trim();
     
     if (trimmed.startsWith('component')) return 'COMPONENT_DECL';
+    if (trimmed.startsWith('memory')) return 'MEMORY_DECL';
     if (trimmed.startsWith('view:')) return 'VIEW_ROOT';
     if (trimmed.startsWith('style:')) return 'STYLE_ROOT';
     if (trimmed.startsWith('test')) return 'TEST_ROOT';

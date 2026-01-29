@@ -1,4 +1,5 @@
 use TodoItem from "./TodoItem.viand"
+use State from "./State.viand"
 
 component App:
     $title: string = "Viand Task Manager (Live)"
@@ -19,7 +20,7 @@ component App:
 
     view:
         div .container:
-            h1: $title
+            h1: State.executiveName + "'s Tasks"
             
             div .input-group:
                 input(bind:value: $newTodo, placeholder: "What needs to be done?")

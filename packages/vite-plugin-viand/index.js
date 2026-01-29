@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { compile } from '../compiler/src/index.ts';
 
 export default function viand() {

@@ -1,0 +1,4 @@
+component ThemeToggle:
+    use State from "./State.viand"
+    view:
+        button -> click(State.toggle()): State.theme

@@ -103,6 +103,14 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             if (m) manifest.name = m[1];
             continue;
         }
+        if (token.type === 'MEMORY_DECL') {
+            const m = trimmed.match(/memory\s+(\w+)/);
+            if (m) {
+                manifest.name = m[1];
+                manifest.isMemory = true;
+            }
+            continue;
+        }
         if (token.type === 'IMPORT_DECLARATION') {
             const m = trimmed.match(/use\s+(\w+)\s+from\s+["'](.*?)["']/);
             if (m) manifest.imports.push({ name: m[1], path: m[2] });
@@ -336,36 +344,41 @@ export function generateLogicClass(manifest: ComponentManifest): string {
     });
 
     if (manifest.queries.length > 0) {
-        code += `
-  sql = {
-`;
+        code += `\n  sql = {\n`;
         manifest.queries.forEach(q => {
-            code += `    ${q.label}: (...args: any[]) => {
-`;
-            code += `      console.log("SQL EXEC [${q.label}]: ${q.query.replace(/\n/g, ' ')}", args);
-`;
-            code += `      return [];
-`;
-            code += `    },
-`;
+            code += `    ${q.label}: (...args: any[]) => {\n`;
+            code += `      console.log("SQL EXEC [${q.label}]: ${q.query.replace(/\n/g, ' ')}", args);\n`;
+            code += `      return [];\n`;
+            code += `    },\n`;
         });
-        code += `  }
-`;
+        code += `  }\n`;
     }
     
-    return code + `}
-`;
+    code += `}\n`;
+
+    if (manifest.isMemory) {
+        code += `\n// Memory Pillar: Export a singleton instance\n`;
+        code += `export const ${manifest.name} = new ${manifest.name}Logic();\n`;
+    }
+
+    return code;
 }
 
 /**
  * 4. SVELTE GENERATOR (Wrapper)
  */
 export function generateSvelte5(manifest: ComponentManifest): string {
-    let script = `<script lang="ts">
-`;
-    manifest.imports.forEach(i => script += `  import ${i.name} from "${i.path}";\n`);
-    script += `  import { ${manifest.name}Logic } from "./${manifest.name}.viand.logic.svelte";
-`;
+    if (manifest.isMemory) return ""; // Memory blocks don't need a Svelte wrapper
+
+    let script = `<script lang="ts">\n`;
+    
+    manifest.imports.forEach(i => {
+        let path = i.path;
+        if (path.endsWith('.viand')) path = path.replace('.viand', '.viand.logic.svelte');
+        script += `  import { ${i.name} } from "${path}";\n`;
+    });
+
+    script += `  import { ${manifest.name}Logic } from "./${manifest.name}.viand.logic.svelte";\n`;
     
     const propNames = manifest.props.map(p => p.id);
     if (manifest.slots.length > 0) {
@@ -385,11 +398,14 @@ export function generateSvelte5(manifest: ComponentManifest): string {
     script += `</script>\n\n`;
 
     const renderNode = (node: ViewNode, indent: string, localVars: string[] = []): string => {
+        const importedNames = manifest.imports.map(i => i.name);
+        
         if (node.type === 'text') {
             let content = cleanViandText(node.content!);
             content = content.replace(/\{([a-zA-Z0-9_.]+)\}/g, (match, p1) => {
                 const rootVar = p1.split('.')[0];
-                return localVars.includes(rootVar) ? `{${p1}}` : `{$.${p1}}`;
+                if (localVars.includes(rootVar) || importedNames.includes(rootVar)) return `{${p1}}`;
+                return `{$.${p1}}`;
             });
             return `${indent}${content}\n`;
         }
@@ -402,11 +418,13 @@ export function generateSvelte5(manifest: ComponentManifest): string {
                 if (v.startsWith('$')) {
                     const varPath = v.slice(1);
                     const rootVar = varPath.split('.')[0];
-                    val = localVars.includes(rootVar) ? `{${varPath}}` : `{$.${rootVar}}`;
+                    if (localVars.includes(rootVar) || importedNames.includes(rootVar)) val = `{${varPath}}`;
+                    else val = `{$.${rootVar}}`;
                 }
                 else if (k.startsWith('bind:')) {
                     const rootVar = v.split('.')[0];
-                    val = localVars.includes(rootVar) ? `{${v}}` : `{$.${v}}`;
+                    if (localVars.includes(rootVar) || importedNames.includes(rootVar)) val = `{${v}}`;
+                    else val = `{$.${v}}`;
                 }
                 else if (!v.startsWith('{') && !v.startsWith('"') && !v.startsWith("'")) {
                     val = `"${v}"`;
@@ -498,7 +516,7 @@ export function generateTests(manifest: ComponentManifest): string {
                 if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('//')) return;
                 let cleaned = line.replace(/\$([a-zA-Z0-9_]+)/g, '$.$1');
                 manifest.functions.forEach(f => {
-                    const regex = new RegExp(`\b${f.name}\(`, 'g');
+                    const regex = new RegExp(`\\b${f.name}\\(`, 'g');
                     if (!cleaned.includes(`$.${f.name}(`)) cleaned = cleaned.replace(regex, `$.${f.name}(`);
                 });
                 code += `    ${cleaned};\n`;

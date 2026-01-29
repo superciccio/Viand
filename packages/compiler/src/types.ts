@@ -1,5 +1,6 @@
 export type TokenType = 
     | 'COMPONENT_DECL'
+    | 'MEMORY_DECL'
     | 'IMPORT_DECLARATION'
     | 'PROP_DECLARATION'
     | 'STATE_VARIABLE'
@@ -78,6 +79,7 @@ export interface MustAssertion {
 
 export interface ComponentManifest {
     name: string;
+    isMemory: boolean;
     imports: { name: string, path: string }[];
     props: ManifestProp[];
     state: ManifestProp[];
