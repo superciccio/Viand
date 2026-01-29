@@ -54,4 +54,10 @@ test App:
         must $todos.length == 1
         must $todos[0].text == "Research Tauri"
 
+    @ui:
+        must find "h1" with text "Andrea's Tasks"
+        must find "button" with text "Add"
+
+
+
 // trigger

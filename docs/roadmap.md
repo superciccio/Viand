@@ -26,6 +26,8 @@ This document tracks the strategic development milestones for the Viand language
 - [x] **Brain-Body-Critic Architecture:** Shared reactive logic (.svelte.ts).
 - [x] **@logic Persona:** In-memory state testing via mirrored classes.
 - [ ] **@ui Persona:** Headless DOM verification.
+    - **Step 1:** Implement via Vitest + JSDOM (Simulated browser).
+    - **Note:** A custom "Ghost Renderer" (Option C) may be implemented later for deeper DSL integration.
 - [ ] **@integration Persona:** Facade-based dependency mocking.
 
 ## 🚩 Milestone 6: Sibling Resource Awareness [PARTIALLY COMPLETED]

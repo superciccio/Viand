@@ -20,9 +20,9 @@ export function cleanLogic(code: string): string {
     const preparedCode = code.replace(/\$([a-zA-Z0-9_]+)/g, '__VIAND_VAR_$1');
 
     try {
-        const ast = acorn.parse(preparedCode, {
-            ecmaVersion: 'latest',
-            sourceType: 'module'
+        const ast = acorn.parse(preparedCode, { 
+            ecmaVersion: 'latest', 
+            sourceType: 'module' 
         }) as any;
 
         walk(ast, {
@@ -45,7 +45,7 @@ export function cleanLogic(code: string): string {
 function cleanViandText(text: string): string {
     if (typeof text !== 'string') return text;
     let cleaned = text.trim();
-    cleaned = cleaned.replace(/["']\s*\+\s*/g, '').replace(/\+\s*["']/g, '').replace(/["']/g, '');
+    cleaned = cleaned.replace(/["']\s*\+\s*/g, '').replace(/\+\s*["']/g, '').replace(/["']/g, '');         
     cleaned = cleaned.replace(/\$([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_.]+)*)/g, '{$1}');
     return cleaned;
 }
@@ -71,6 +71,7 @@ function findSplitColon(text: string): number {
 export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: string = "") {
     const manifest: ComponentManifest = {
         name: "Component",
+        isMemory: false,
         imports: [], props: [], state: [], reactive: [], functions: [], styles: [], view: [], tests: [], queries: [], slots: []
     };
 
@@ -117,7 +118,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             continue;
         }
         if (token.type === 'PROP_DECLARATION') {
-            const m = trimmed.match(/@prop\s+\"?([a-z_]\w*)/i);
+            const m = trimmed.match(/@prop\s+\$?([a-z_]\w*)/i);
             if (m) {
                 const id = m[1];
                 let type = 'any', value = 'undefined';
@@ -166,7 +167,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             continue;
         }
         if (token.type === 'TEST_PERSONA') {
-            const persona = trimmed.slice(1) as 'logic' | 'ui' | 'integration';
+            const persona = trimmed.slice(1).replace(':', '') as 'logic' | 'ui' | 'integration';
             const node: TestNode = { type: persona, body: [], line: token.line, depth: token.depth };
             manifest.tests.push(node);
             stack.push({ type: 'test-node', node, depth: token.depth });
@@ -243,13 +244,11 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             const tagPart = idx !== -1 ? trimmed.slice(0, idx).trim() : trimmed.trim();
             const inline = idx !== -1 ? trimmed.slice(idx + 1).trim() : "";
             
-            // Handle 'slot' keyword
             if (tagPart.startsWith('slot')) {
                 let slotName = "children";
                 const sm = tagPart.match(/slot\s+(\w+)/);
                 if (sm) slotName = sm[1];
                 if (!manifest.slots.includes(slotName)) manifest.slots.push(slotName);
-                
                 const node: ViewNode = { type: 'slot', content: slotName, children: [], line: token.line };
                 context.children.push(node);
                 continue;
@@ -284,10 +283,10 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             if (eventSide) {
                 const m = eventSide.match(/^([a-z0-9_.]+)\s*\((.*?)\)$/i);
                 if (m) {
-                    if (!m[2].trim()) attrs['onclick'] = `{() => $.${m[1]}()}`;
-                    else attrs[`on${m[1].replace(/\./g, '|')}`] = `{(...args) => $.${m[2]}(...args)}`;
+                    if (!m[2].trim()) attrs['onclick'] = `{() => _.${m[1]}()}`;
+                    else attrs[`on${m[1].replace(/\./g, '|')}`] = `{(...args) => _.${m[2]}(...args)}`;
                 } else {
-                    attrs['onclick'] = `{() => $.${eventSide.replace('()', '').trim()}()}`;
+                    attrs['onclick'] = `{() => _.${eventSide.replace('()', '').trim()}()}`;
                 }
             }
             const node: ViewNode = { type: 'element', tag: actualTag, attrs, children: [], line: token.line };
@@ -305,113 +304,142 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
 }
 
 /**
- * 3. LOGIC GENERATOR (Shared Brain)
+ * 3. LOGIC GENERATOR
  */
 export function generateLogicClass(manifest: ComponentManifest): string {
     let code = `export class ${manifest.name}Logic {
 `;
-    manifest.state.forEach(s => code += `  ${s.id} = $state(${s.value});\n`);
-    manifest.props.forEach(p => code += `  ${p.id} = $state(${p.value});\n`);
+    manifest.state.forEach(s => code += `  ${s.id} = $state(${s.value});
+`);
+    manifest.props.forEach(p => code += `  ${p.id} = $state(${p.value});
+`);
     manifest.reactive.forEach(r => {
         const expr = r.expression.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
-        code += `  ${r.id} = $derived(${expr});\n`;
+        code += `  ${r.id} = $derived(${expr});
+`;
     });
 
     manifest.functions.forEach(f => {
         code += `
   ${f.name}(${f.params?.join(', ')}) {
 `;
-        const renderBody = (body: (string | ManifestFunction)[], indent: string): string => {
-            return body.map(line => {
-                if (typeof line === 'string') {
-                    const trimmedLine = line.trim();
-                    if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('//')) return "";
-                    let cleaned = line.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
-                    cleaned = cleaned.replace(/\bsql\./g, 'this.sql.');
-                    return `${indent}${cleaned};\n`;
-                } else if (line.type === 'js-block') {
-                    const rawH = line.body[0].toString().trim();
-                    let h = rawH.replace(/^if\s+(.*):$/, 'if ($1) {');
-                    h = h.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
-                    return `${indent}${h}\n${renderBody(line.body.slice(1), indent + "  ")}${indent}}\n`;
-                }
-                return "";
-            }).join('');
-        };
+        const renderBody = (body: (string | ManifestFunction)[], indent: string): string => body.map(line => {
+            if (typeof line === 'string') {
+                const trimmedLine = line.trim();
+                if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('//')) return "";
+                let cleaned = line.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
+                cleaned = cleaned.replace(/\bsql\./g, 'this.sql.');
+                return `${indent}${cleaned};\n`;
+            } else if (line.type === 'js-block') {
+                const rawH = line.body[0].toString().trim();
+                let h = rawH.replace(/^if\s+(.*):$/, 'if ($1) {');
+                h = h.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
+                return `${indent}${h}\n${renderBody(line.body.slice(1), indent + "  ")}${indent}}\n`;
+            }
+            return "";
+        }).join('');
         code += renderBody(f.body, "    ");
         code += `  }
 `;
     });
 
     if (manifest.queries.length > 0) {
-        code += `\n  sql = {\n`;
+        code += `
+  sql = {
+`;
         manifest.queries.forEach(q => {
-            code += `    ${q.label}: (...args: any[]) => {\n`;
-            code += `      console.log("SQL EXEC [${q.label}]: ${q.query.replace(/\n/g, ' ')}", args);\n`;
-            code += `      return [];\n`;
-            code += `    },\n`;
+            code += `    ${q.label}: (...args: any[]) => {
+`;
+            code += `      console.log("SQL EXEC [${q.label}]: ${q.query.replace(/\n/g, ' ')}", args);
+`;
+            code += `      return [];
+`;
+            code += `    },
+`;
         });
-        code += `  }\n`;
+        code += `  }
+`;
     }
-    
-    code += `}\n`;
-
-    if (manifest.isMemory) {
-        code += `\n// Memory Pillar: Export a singleton instance\n`;
-        code += `export const ${manifest.name} = new ${manifest.name}Logic();\n`;
-    }
-
+    code += `}
+`;
+    if (manifest.isMemory) code += `
+export const ${manifest.name} = new ${manifest.name}Logic();
+`;
     return code;
 }
 
 /**
- * 4. SVELTE GENERATOR (Wrapper)
+ * 4. SVELTE GENERATOR
  */
 export function generateSvelte5(manifest: ComponentManifest): string {
-    if (manifest.isMemory) return ""; // Memory blocks don't need a Svelte wrapper
-
-    let script = `<script lang="ts">\n`;
-    
+    if (manifest.isMemory) return "";
+    let script = `<script lang="ts">
+`;
     manifest.imports.forEach(i => {
         let path = i.path;
         if (path.endsWith('.viand')) path = path.replace('.viand', '.viand.logic.svelte');
-        script += `  import { ${i.name} } from "${path}";\n`;
+        script += `  import { ${i.name} } from "${path}";
+`;
     });
-
-    script += `  import { ${manifest.name}Logic } from "./${manifest.name}.viand.logic.svelte";\n`;
-    
+    script += `  import { ${manifest.name}Logic } from "./${manifest.name}.viand.logic.svelte";
+`;
     const propNames = manifest.props.map(p => p.id);
-    if (manifest.slots.length > 0) {
-        manifest.slots.forEach(s => { if (!propNames.includes(s)) propNames.push(s); });
-    }
-    
+    manifest.slots.forEach(s => { if (!propNames.includes(s)) propNames.push(s); });
     if (propNames.length > 0) {
         script += `  let { ${propNames.map(id => {
             const p = manifest.props.find(x => x.id === id);
             return p ? `${id} = $bindable(${p.value})` : id;
-        }).join(', ')} } = $props();\n`;
-    }
-    
-    script += `  const $ = new ${manifest.name}Logic();
+        }).join(', ')} } = $props();
 `;
-    manifest.props.forEach(p => script += `  $effect(() => { $.${p.id} = ${p.id}; });\n`);
-    script += `</script>\n\n`;
+    }
+    script += `  const _ = new ${manifest.name}Logic();
+`;
+    manifest.props.forEach(p => script += `  $effect(() => { _.${p.id} = ${p.id}; });
+`);
+    script += `</script>
 
-    const renderNode = (node: ViewNode, indent: string, localVars: string[] = []): string => {
-        const importedNames = manifest.imports.map(i => i.name);
-        
-        if (node.type === 'text') {
-            let content = cleanViandText(node.content!);
-            content = content.replace(/\{([a-zA-Z0-9_.]+)\}/g, (match, p1) => {
-                const rootVar = p1.split('.')[0];
-                if (localVars.includes(rootVar) || importedNames.includes(rootVar)) return `{${p1}}`;
-                return `{$.${p1}}`;
-            });
-            return `${indent}${content}\n`;
-        }
-        if (node.type === 'slot') {
-            return `${indent}{@render ${node.content}()}\n`;
-        }
+`;
+
+        const renderNode = (node: ViewNode, indent: string, localVars: string[] = []): string => {
+
+            const importedNames = manifest.imports.map(i => i.name);
+
+            
+
+            if (node.type === 'text') {
+
+                let content = node.content!.trim();
+
+                
+
+                // If it's a raw expression (e.g. State.name + "...") wrap it
+
+                const firstWord = content.split(/[ .(+]/)[0];
+
+                if (importedNames.includes(firstWord) || content.includes('+')) {
+
+                    return `${indent}{${content}}\n`;
+
+                }
+
+    
+
+                content = cleanViandText(content);
+
+                content = content.replace(/\{([a-zA-Z0-9_.]+)\}/g, (match, p1) => {
+
+                    const rootVar = p1.split('.')[0];
+
+                    if (localVars.includes(rootVar) || importedNames.includes(rootVar)) return `{${p1}}`;
+
+                    return `{_.${p1}}`;
+
+                });
+
+                return `${indent}${content}\n`;
+
+            }
+        if (node.type === 'slot') return `${indent}{@render ${node.content}()}\n`;
         if (node.type === 'element') {
             const attrParts = Object.entries(node.attrs || {}).map(([k, v]) => {
                 let val = v;
@@ -419,24 +447,18 @@ export function generateSvelte5(manifest: ComponentManifest): string {
                     const varPath = v.slice(1);
                     const rootVar = varPath.split('.')[0];
                     if (localVars.includes(rootVar) || importedNames.includes(rootVar)) val = `{${varPath}}`;
-                    else val = `{$.${rootVar}}`;
-                }
-                else if (k.startsWith('bind:')) {
+                    else val = `{_.${rootVar}}`;
+                } else if (k.startsWith('bind:')) {
                     const rootVar = v.split('.')[0];
                     if (localVars.includes(rootVar) || importedNames.includes(rootVar)) val = `{${v}}`;
-                    else val = `{$.${v}}`;
-                }
-                else if (!v.startsWith('{') && !v.startsWith('"') && !v.startsWith("'")) {
-                    val = `"${v}"`;
-                }
+                    else val = `{_.${v}}`;
+                } else if (!v.startsWith('{') && !v.startsWith('"') && !v.startsWith("'")) val = `"${v}"`;
                 return `${k}=${val}`;
             });
             const attrStr = attrParts.length > 0 ? ' ' + attrParts.join(' ') : '';
             const tag = node.tag ? node.tag.toLowerCase() : 'div';
             const isComponent = node.tag && node.tag[0] === node.tag[0].toUpperCase();
-            
             if (['input','img','br','hr'].includes(tag)) return `${indent}<${node.tag}${attrStr} />\n`;
-            
             let childrenStr = "";
             if (node.children.length > 0) {
                 if (isComponent) {
@@ -444,18 +466,16 @@ export function generateSvelte5(manifest: ComponentManifest): string {
 `;
                     childrenStr += node.children.map(c => renderNode(c, indent + "    ", localVars)).join('');
                     childrenStr += `${indent}  {/snippet}\n`;
-                } else {
-                    childrenStr += node.children.map(c => renderNode(c, indent + "  ", localVars)).join('');
-                }
+                } else childrenStr += node.children.map(c => renderNode(c, indent + "  ", localVars)).join('');
             }
-            
             return `${indent}<${node.tag}${attrStr}>
 ${childrenStr}${indent}</${node.tag}>
 `;
         }
         if (node.type === 'each') {
             const newLocalVars = [...localVars, node.item!];
-            return `${indent}{#each $.${node.list} as ${node.item}}\n${node.children.map(c => renderNode(c, indent + "  ", newLocalVars)).join('')}${indent}{/each}\n`;
+            return `${indent}{#each _.${node.list} as ${node.item}}
+${node.children.map(c => renderNode(c, indent + "  ", newLocalVars)).join('')}${indent}{/each}\n`;
         }
         if (node.type === 'if') {
             let out = `${indent}{#if ${cleanLogic(node.condition!)}}
@@ -470,7 +490,7 @@ ${node.alternate.children.map(c => renderNode(c, indent + "  ", localVars)).join
         if (node.type === 'match') {
             const rawExpr = node.expression!.startsWith('$') ? node.expression!.slice(1) : node.expression!;
             const rootVar = rawExpr.split('.')[0];
-            const e = localVars.includes(rootVar) ? rawExpr : `$.${rawExpr}`;
+            const e = localVars.includes(rootVar) ? rawExpr : `_.${rawExpr}`;
             let out = "";
             node.cases!.forEach((c, i) => {
                 const header = i === 0 ? `{#if ${e} === ${c.condition}}` : `{:else if ${e} === ${c.condition}}`;
@@ -486,7 +506,8 @@ ${node.alternate.children.map(c => renderNode(c, indent + "  ", localVars)).join
     if (manifest.styles.length > 0) {
         style = `\n<style>\n`;
         manifest.styles.forEach(s => {
-            style += `  ${s.selector} {\n`;
+            style += `  ${s.selector} {
+`;
             s.rules.forEach(r => style += `    ${r};\n`);
             style += `  }\n`;
         });
@@ -501,27 +522,60 @@ ${node.alternate.children.map(c => renderNode(c, indent + "  ", localVars)).join
 export function generateTests(manifest: ComponentManifest): string {
     if (manifest.tests.length === 0) return "";
     let code = `import { describe, it, expect } from 'vitest';\n`;
-    code += `import { ${manifest.name}Logic } from './${manifest.name}.viand.logic.svelte';\n\n`;
+    code += `import { render, fireEvent, screen } from '@testing-library/svelte';\n`;
+    code += `import { ${manifest.name}Logic } from './${manifest.name}.viand.logic.svelte';\n`;
+    code += `import ${manifest.name} from './${manifest.name}.viand';\n\n`;
 
     manifest.tests.forEach(suite => {
         code += `describe('${manifest.name} ${suite.type}', () => {\n`;
-        code += `  it('should pass ${suite.type} verification', () => {\n`;
-        code += `    const $ = new ${manifest.name}Logic();\n`;
+        code += `  it('should pass ${suite.type} verification', async () => {\n`;
+        
+        if (suite.type === 'logic') {
+            code += `    const _ = new ${manifest.name}Logic();\n`;
+        } else if (suite.type === 'ui') {
+            code += `    render(${manifest.name});\n`;
+        }
+
         suite.body.forEach(line => {
             if (typeof line === 'object' && line.type === 'must') {
-                let expr = line.expression.replace(/\$([a-zA-Z0-9_]+)/g, '$.$1');
-                code += `    expect(${expr}).toBeTruthy();\n`;
+                const rawLine = line.expression;
+                if (suite.type === 'ui' && (rawLine.includes('have ') || rawLine.includes('find '))) {
+                    const selectorMatch = rawLine.match(/["'](.*?)["']/);
+                    const selector = selectorMatch ? selectorMatch[1] : "";
+                    const textMatch = rawLine.match(/with text ["'](.*?)["']/);
+                    const text = textMatch ? textMatch[1] : "";
+                    if (text) {
+                        code += `    expect(screen.getByText(/${text}/i)).toBeInTheDocument();\n`;
+                    } else if (selector) {
+                        code += `    expect(document.querySelector("${selector}")).toBeInTheDocument();\n`;
+                    }
+                } else {
+                    let expr = rawLine.replace(/\$([a-zA-Z0-9_]+)/g, '_.$1');
+                    code += `    expect(${expr}).toBeTruthy();\n`;
+                }
             } else if (typeof line === 'string') {
-                const trimmedLine = line.trim();
-                if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('//')) return;
-                let cleaned = line.replace(/\$([a-zA-Z0-9_]+)/g, '$.$1');
-                manifest.functions.forEach(f => {
-                    const regex = new RegExp(`\\b${f.name}\\(`, 'g');
-                    if (!cleaned.includes(`$.${f.name}(`)) cleaned = cleaned.replace(regex, `$.${f.name}(`);
-                });
-                code += `    ${cleaned};\n`;
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) return;
+                
+                if (suite.type === 'ui') {
+                    if (trimmed.startsWith('click ')) {
+                        const selectorMatch = trimmed.match(/["'](.*?)["']/);
+                        const selector = selectorMatch ? selectorMatch[1] : "button";
+                        code += `    await fireEvent.click(document.querySelector("${selector}")!);\n`;
+                    }
+                } else {
+                    let cleaned = trimmed.replace(/\$([a-zA-Z0-9_]+)/g, '_.$1');
+                    manifest.functions.forEach(f => {
+                        const search = f.name + "(";
+                        if (cleaned.includes(search) && !cleaned.includes("_." + search)) {
+                            cleaned = cleaned.replace(search, "_." + search);
+                        }
+                    });
+                    code += `    ${cleaned};\n`;
+                }
             }
         });
+        
         code += `  });\n`;
         code += `});\n`;
     });

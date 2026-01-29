@@ -3,6 +3,9 @@ import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte'
 import viand from '../packages/vite-plugin-viand/index.js'
 
 export default defineConfig({
+  resolve: {
+    conditions: ['browser', 'development']
+  },
   plugins: [
     viand(),
     svelte({
@@ -10,4 +13,9 @@ export default defineConfig({
       extensions: ['.svelte', '.viand']
     })
   ],
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test-setup.ts']
+  }
 })
