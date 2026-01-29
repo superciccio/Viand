@@ -1,11 +1,12 @@
+#!/usr/bin/env tsx
 import fs from 'fs';
 import path from 'path';
-import { tokenize, analyzeHierarchy } from './src/lexer.js';
-import { transform } from './src/transformer.js';
+import { tokenize, analyzeHierarchy } from './src/lexer.ts';
+import { transform } from './src/transformer.ts';
 
 const CASES_DIR = './tests/cases';
 const PROJECT_SRC = '../../project-test/src';
-const PROJECT_DIST = '../../project-test/src';
+const PROJECT_DIST = './dist';
 
 /**
  * Phase 1: Run the Gauntlet
@@ -21,15 +22,13 @@ async function runGauntlet() {
         try {
             const { tokens, lexerErrors } = tokenize(code);
             const tree = analyzeHierarchy(tokens);
-            const svelteOutput = transform(tree, lexerErrors); // Get the output!
+            const svelteOutput = transform(tree, lexerErrors);
 
             if (!isExpectedToFail) {
                 const expectedPath = path.join('./tests/expected', file.replace('.viand', '.svelte'));
 
                 if (fs.existsSync(expectedPath)) {
                     const expectedOutput = fs.readFileSync(expectedPath, 'utf-8');
-
-                    // --- THE CLEAN COMPARISON GOES HERE ---
                     const normalize = (str) => str.replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
 
                     if (normalize(svelteOutput) !== normalize(expectedOutput)) {
@@ -40,15 +39,12 @@ async function runGauntlet() {
                         console.log(expectedOutput);
                         return false;
                     }
-                    // --------------------------------------
-
                     console.log(`✅ Passed (Snapshot Match): ${file}`);
                 } else {
                     console.log(`✅ Passed (Compiled, but no snapshot found): ${file}`);
                 }
             }
         } catch (e) {
-            // If we get here, the compiler "Screamed"
             if (isExpectedToFail) {
                 console.log(`✅ Correctly Blocked (Expected): ${file}`);
             } else {
@@ -84,7 +80,6 @@ function buildProject() {
     });
 }
 
-// THE MAIN LOOP
 (async () => {
     const gauntletSuccess = await runGauntlet();
     if (gauntletSuccess) {

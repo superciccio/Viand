@@ -6,15 +6,15 @@
   }
 </script>
 
-<form on:submit|preventDefault={handleSubmit}>
+<form onsubmit|preventDefault={handleSubmit}>
   <input bind:value={text} placeholder="Type here" />
   <button>
     Submit
   </button>
-  <button on:click={handleSubmit}>
+  <button onclick={handleSubmit}>
     Explicit Click
   </button>
-  <button on:click={handleSubmit}>
+  <button onclick={handleSubmit}>
     Shorthand Click
   </button>
 </form>

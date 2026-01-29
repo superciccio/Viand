@@ -14,7 +14,7 @@
   <p>
     The count is {count}
   </p>
-  <button on:click={increment}>
+  <button onclick={increment}>
     Add 1
   </button>
 </div>

@@ -1,4 +1,4 @@
-import { compile } from '../compiler/src/index.js';
+import { compile } from '../compiler/src/index.ts';
 
 export default function viand() {
   return {
