@@ -1,0 +1,12 @@
+component BindingTest:
+    $text: string = ""
+    
+    fn handleSubmit():
+        $text = "Submitted"
+
+    view:
+        form -> submit.preventDefault(handleSubmit):
+            input(bind:value: $text, placeholder: "Type here")
+            button: "Submit"
+            button -> click(handleSubmit): "Explicit Click"
+            button -> handleSubmit: "Shorthand Click"

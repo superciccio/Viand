@@ -1,0 +1,8 @@
+component App:
+    $count = 0
+    !inc():
+        $count += 1
+    view:
+        div.container:
+            h1: "Viand"
+            button -> !inc(): "Value is " + $count

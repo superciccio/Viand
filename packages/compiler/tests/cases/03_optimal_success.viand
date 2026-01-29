@@ -1,0 +1,12 @@
+component App:
+    $count: number = 0
+    $user: string = "Andrea"
+
+    fn increment():
+        $count += 1
+
+    view:
+        div .container:
+            h1: "Welcome " + $user
+            p: "The count is " + $count
+            button -> increment(): "Add 1"

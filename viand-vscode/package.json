@@ -1,0 +1,20 @@
+{
+  "name": "viand-lang",
+  "displayName": "Viand Language Support",
+  "description": "Syntax highlighting for the Viand Language",
+  "version": "0.0.1",
+  "publisher": "andrea",
+  "engines": { "vscode": "^1.70.0" },
+  "contributes": {
+    "languages": [{
+      "id": "viand",
+      "aliases": ["Viand", "viand"],
+      "extensions": [".viand"]
+    }],
+    "grammars": [{
+      "language": "viand",
+      "scopeName": "source.viand",
+      "path": "./syntaxes/viand.tmLanguage.json"
+    }]
+  }
+}

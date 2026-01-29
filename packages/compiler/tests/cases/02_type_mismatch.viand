@@ -1,0 +1,4 @@
+component Shop:
+    $price: number = "Free"
+    view:
+        h1: "Price is " + $price

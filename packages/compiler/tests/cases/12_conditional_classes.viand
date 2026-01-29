@@ -1,0 +1,5 @@
+component ConditionalClass:
+    $isActive: boolean = true
+    
+    view:
+        div .box(class:active: $isActive): "Status Box"

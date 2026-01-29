@@ -1,0 +1,11 @@
+component MatchTest:
+    $status: string = "loading"
+    
+    view:
+        match $status:
+            case "loading":
+                p: "Loading..."
+            case "error":
+                p: "Error!"
+            default:
+                p: "Content"

@@ -1,0 +1,10 @@
+component Conditional:
+    $count: number = 10
+    
+    view:
+        if $count > 10:
+            p: "High"
+        else if $count > 5:
+            p: "Medium"
+        else:
+            p: "Low"

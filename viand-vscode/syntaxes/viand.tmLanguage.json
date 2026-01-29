@@ -1,0 +1,36 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Viand",
+  "patterns": [
+    {
+      "name": "keyword.other.viand", 
+      "match": "\\b(fn)\\b"
+    },
+    {
+      "name": "keyword.control.viand",
+      "match": "\\b(component|view|if|else|for|in)\\b"
+    },
+    {
+      "name": "variable.other.viand",
+      "match": "\\$[a-zA-Z0-9_]+"
+    },
+    {
+      "name": "entity.name.function.viand",
+      "match": "(?<=fn\\s+)[a-zA-Z0-9_]+"
+    },
+    {
+      "name": "constant.language.viand",
+      "match": "@[a-zA-Z0-9_:]+"
+    },
+    {
+      "name": "string.quoted.double.viand",
+      "begin": "\"",
+      "end": "\""
+    },
+    {
+  "name": "support.type.viand",
+  "match": "(?<=:\\s*)[a-zA-Z]+"
+}
+  ],
+  "scopeName": "source.viand"
+}

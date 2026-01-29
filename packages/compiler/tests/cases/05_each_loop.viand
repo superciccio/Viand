@@ -1,0 +1,7 @@
+component TodoList:
+    $todos: any = []
+    
+    view:
+        ul:
+            each $item in $todos:
+                li: $item.text

@@ -1,0 +1,20 @@
+component TodoItem:
+    @prop $task: string = ""
+    @prop $done: boolean = false
+
+    view:
+        div .todo-item(class:completed: $done):
+            input(type: "checkbox", bind:checked: $done)
+            span: $task
+
+    style:
+        .todo-item:
+            display: flex
+            align-items: center
+            gap: 10px
+            padding: 8px
+            border-bottom: 1px solid #eee
+
+        .completed:
+            text-decoration: line-through
+            color: #888

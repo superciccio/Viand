@@ -1,0 +1,6 @@
+component BrokenCounter:
+    $count = 0
+  fn inc:
+    $count += 1
+    view:
+        button inc

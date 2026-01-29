@@ -1,6 +1,7 @@
 {
   "name": "viand-monorepo",
   "private": true,
+  "type": "module",
   "description": "The Viand Programming Language ecosystem",
   "workspaces": [
     "packages/*",

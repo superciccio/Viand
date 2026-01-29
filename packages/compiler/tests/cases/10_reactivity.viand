@@ -1,0 +1,9 @@
+component ReactiveTest:
+    $count: number = 0
+    sync $double = $count * 2
+    
+    view:
+        div:
+            p: "Count: " + $count
+            p: "Double: " + $double
+            button -> increment: "Inc"

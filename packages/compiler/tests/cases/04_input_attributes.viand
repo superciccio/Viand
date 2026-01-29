@@ -1,0 +1,4 @@
+component InputTest:
+    $myValue: string = "Hello"
+    view:
+        input(type: "text", value: $myValue):

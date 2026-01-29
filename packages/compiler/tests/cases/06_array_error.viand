@@ -1,0 +1,5 @@
+component ArrayError:
+    $list: array = "Not an array"
+
+    view:
+        div: "This should fail"

@@ -1,0 +1,11 @@
+component StyledBtn:
+    view:
+        button .btn: "Click"
+    
+    style:
+        .btn:
+            color: red
+            font-weight: bold
+            
+            &:hover:
+                color: blue
