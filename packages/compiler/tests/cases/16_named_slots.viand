@@ -1,0 +1,6 @@
+component Split:
+    view:
+        div .left:
+            slot side:
+        div .right:
+            slot:

@@ -1,7 +1,8 @@
 <script lang="ts">
-  let isActive: boolean = $state(true);
+  import { ConditionalClassLogic } from "./ConditionalClass.viand.logic.svelte";
+  const $ = new ConditionalClassLogic();
 </script>
 
-<div class:active={isActive} class="box">
+<div class:active={$.isActive} class="box">
   Status Box
 </div>

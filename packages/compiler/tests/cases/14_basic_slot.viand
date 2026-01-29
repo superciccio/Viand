@@ -1,0 +1,4 @@
+component Layout:
+    view:
+        div .shell:
+            slot:

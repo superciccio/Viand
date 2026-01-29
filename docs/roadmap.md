@@ -13,46 +13,51 @@ This document tracks the strategic development milestones for the Viand language
 - [x] **Bindings & Events:** Generic `bind:` and event modifiers.
 - [x] **Viand-Native CSS:** Indentation-based styling.
 
-## 🚩 Milestone 5: The "Steel" Foundation (Hardening)
-**Goal:** Professional-grade stability and developer experience.
+## 🚩 Milestone 5: The "Steel" Foundation (Hardening) [PARTIALLY COMPLETED]
 - [x] **Acorn Integration:** Real JS parsing for logic and expressions.
 - [x] **Vite Plugin:** Native `.viand` support (in-memory compilation).
 - [x] **TypeScript Refactor:** Port the compiler to TS.
-- [ ] **Compiler Validation:** Catch logic errors (e.g., undeclared variables) during IR build.
-- [ ] **Error Mapping:** Map Svelte errors back to Viand line numbers (Source Maps).
+- [ ] **Compiler Validation:** Catch logic errors during IR build.
+- [x] **Error Mapping:** Source Map support for browser debugging.
 
 ## 🚩 Milestone 5.2: Integrated Native Testing [PARTIALLY COMPLETED]
-**Goal:** Make testing a first-class citizen of the Viand DSL.
 - [x] **`test` Block:** Root-level container for test suites.
 - [x] **`must` Keyword:** Clean assertion syntax (e.g., `must $count == 1`).
-- [x] **Brain-Body-Critic Architecture:** Shared reactive logic between Svelte and Vitest.
-- [x] **@logic Persona:** In-memory state testing via generated mirror classes.
+- [x] **Brain-Body-Critic Architecture:** Shared reactive logic (.svelte.ts).
+- [x] **@logic Persona:** In-memory state testing via mirrored classes.
 - [ ] **@ui Persona:** Headless DOM verification.
 - [ ] **@integration Persona:** Facade-based dependency mocking.
-- [x] **VS Code Integration:** File nesting for clean workspace ergonomics.
 
-## 🚩 Milestone 6: Sibling Resource Awareness (The "Dream" Logic)
-**Goal:** Allow Viand to "swallow" external logic files.
-- [ ] **SQL Sibling Scanning:** Look for `.sql` files matching component names.
-- [ ] **Query Labeling:** Parse `-- label: name` markers in SQL files.
-- [ ] **Resource Injection:** Make `sql.labelName()` available inside Viand functions.
+## 🚩 Milestone 6: Sibling Resource Awareness [PARTIALLY COMPLETED]
+- [x] **SQL Sibling Scanning:** Look for `.sql` files matching component names.
+- [x] **Query Labeling:** Parse `-- label: name` markers in SQL files.
+- [x] **Resource Injection:** Make `sql.labelName()` available inside Viand functions.
 
-## 🚩 Milestone 7: The Tauri Auto-Bridge
+## 🚩 Milestone 7: Advanced Composition (The Shell Pillar)
+**Goal:** Enable reusable layouts and UI injection.
+- [ ] **`slot:` keyword:** Support for Svelte 5 snippets and slots.
+- [ ] **UI as Props:** Ability to pass Viand view-nodes into child components.
+
+## 🚩 Milestone 8: Global State (The Memory Pillar)
+**Goal:** Share data across components without prop-drilling.
+- [ ] **`global` keyword:** Define state that is accessible throughout the project.
+- [ ] **Shared Brains:** Components can import logic from other `.viand` logic files.
+
+## 🚩 Milestone 9: Executive Routing (The Navigation Pillar)
+**Goal:** Build multi-page SPAs and Blogs natively.
+- [ ] **`page-router` block:** A high-level declarative router syntax.
+- [ ] **`goto()` action:** Built-in navigation primitive.
+
+## 🚩 Milestone 10: The Tauri Auto-Bridge (The Native Monster)
 **Goal:** Automate the Native/Web boundary.
 - [ ] **Zero-Rust Commands:** Generate Tauri Rust commands automatically based on SQL labels.
-- [ ] **Auto-Invoke:** Generate the `invoke()` calls in the Svelte script block.
-- [ ] **Plugin Infrastructure:** A Viand-Tauri plugin to handle generic data execution.
+- [ ] **Auto-Invoke:** Generate the `invoke()` calls in the generated logic.
+- [ ] **Native Plugin:** A Viand-Tauri plugin to handle generic data execution.
 
-## 🚩 Milestone 8: Local-First Standard Library
-**Goal:** Built-in primitives for system access.
-- [ ] **`fs` Integration:** Read/Write files via sibling configs or DSL keywords.
-- [ ] **Type Generation:** Derive TypeScript interfaces directly from SQL schema.
+## 🚩 Milestone 11: Universal Runtime (Browser Parity)
+- [ ] **Browser SQL Engine:** Provide WASM-SQLite for 1:1 SQL parity in the browser.
+- [ ] **Viand Dev Tools:** A dashboard to inspect Manifest and Native Bridge state.
 
-## 🚩 Milestone 9: Universal Runtime (Browser Parity)
-**Goal:** Build native apps in the browser with full functionality.
-- [ ] **Browser SQL Engine:** Provide WASM-SQLite when running in a standard browser for 1:1 SQL parity.
-- [ ] **Viand Dev Tools:** A dashboard to inspect the "Manifest" and "Native Bridge" state.
-
-## 🚩 Milestone 10: The Meta-Framework (@viand/framework)
+## 🚩 Milestone 12: The Meta-Framework (@viand/framework)
 - [ ] **Single Dependency:** Wrap Vite, Svelte, and Tauri into one toolkit.
 - [ ] **CLI Scaffolding:** `viand create` for full-stack native apps.

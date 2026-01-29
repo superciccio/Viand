@@ -1,20 +1,16 @@
 <script lang="ts">
-  let count: number = $state(0);
-  let user: string = $state("Andrea");
-
-  function increment() {
-    count += 1;
-  }
+  import { AppLogic } from "./App.viand.logic.svelte";
+  const $ = new AppLogic();
 </script>
 
 <div class="container">
   <h1>
-    Welcome {user}
+    Welcome {$.user}
   </h1>
   <p>
-    The count is {count}
+    The count is {$.count}
   </p>
-  <button onclick={increment}>
+  <button onclick={() => $.increment()}>
     Add 1
   </button>
 </div>

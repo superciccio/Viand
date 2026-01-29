@@ -1,5 +1,6 @@
 <script lang="ts">
-  let myValue: string = $state("Hello");
+  import { InputTestLogic } from "./InputTest.viand.logic.svelte";
+  const $ = new InputTestLogic();
 </script>
 
-<input type="text" value={myValue} />
+<input type="text" value={$.myValue} />

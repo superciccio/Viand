@@ -1,12 +1,13 @@
 <script lang="ts">
-  let status: string = $state("loading");
+  import { MatchTestLogic } from "./MatchTest.viand.logic.svelte";
+  const $ = new MatchTestLogic();
 </script>
 
-{#if status === "loading"}
+{#if $.status === "loading"}
   <p>
     Loading...
   </p>
-{:else if status === "error"}
+{:else if $.status === "error"}
   <p>
     Error!
   </p>

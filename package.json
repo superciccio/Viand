@@ -13,6 +13,7 @@
     "test": "npm test --workspaces"
   },
   "devDependencies": {
+    "svelte": "^5.49.0",
     "tsx": "^4.21.0",
     "typescript": "^5.0.0"
   },

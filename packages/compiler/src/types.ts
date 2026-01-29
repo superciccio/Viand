@@ -45,7 +45,7 @@ export interface ManifestStyle {
     line: number;
 }
 
-export type ViewNodeType = 'element' | 'text' | 'if' | 'each' | 'match';
+export type ViewNodeType = 'element' | 'text' | 'if' | 'each' | 'match' | 'slot';
 
 export interface ViewNode {
     type: ViewNodeType;
@@ -87,4 +87,5 @@ export interface ComponentManifest {
     view: ViewNode[];
     tests: TestNode[];
     queries: { label: string, query: string }[];
+    slots: string[];
 }

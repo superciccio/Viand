@@ -1,0 +1,5 @@
+component App:
+    use Layout from "./Layout.viand"
+    view:
+        Layout:
+            h1: "Hello from Slot"

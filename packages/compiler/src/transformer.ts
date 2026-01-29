@@ -54,7 +54,7 @@ function findSplitColon(text: string): number {
     let depth = 0, inQuote = false, quoteChar: string | null = null;
     for (let i = 0; i < text.length; i++) {
         const char = text[i];
-        if (inQuote) { if (char === quoteChar) inQuote = false; }
+        if (inQuote) { if (char === quoteChar) inQuote = false; } 
         else {
             if (char === '"' || char === "'") { inQuote = true; quoteChar = char; }
             else if (char === '(') depth++;
@@ -71,7 +71,7 @@ function findSplitColon(text: string): number {
 export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: string = "") {
     const manifest: ComponentManifest = {
         name: "Component",
-        imports: [], props: [], state: [], reactive: [], functions: [], styles: [], view: [], tests: [], queries: []
+        imports: [], props: [], state: [], reactive: [], functions: [], styles: [], view: [], tests: [], queries: [], slots: []
     };
 
     if (sqlSource) {
@@ -90,8 +90,8 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
         });
         if (currentLabel && currentQuery) manifest.queries.push({ label: currentLabel, query: currentQuery.trim() });
     }
-
-    const stack: any[] = [{ type: 'root', children: manifest.view, depth: -1 }];
+    
+    const stack: any[] = [{ type: 'root', children: manifest.view, depth: -1 }]; 
 
     for (const token of tree) {
         const trimmed = token.content.trim();
@@ -143,7 +143,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
         if (token.type === 'FUNCTION_ACTION') {
             const m = trimmed.match(/fn\s+(\w+)\s*\((.*?)\)/);
             if (m) {
-                const f: ManifestFunction = { type: 'function', name: m[1], params: m[2].split(',').map(p => p.trim()).filter(p => p), body: [], depth: token.depth, line: token.line };
+                const f: ManifestFunction = { type: 'function', name: m[1], params: m[2].split(',').map(p=>p.trim()).filter(p=>p), body: [], depth: token.depth, line: token.line };
                 manifest.functions.push(f);
                 stack.push(f);
             }
@@ -234,6 +234,19 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             const idx = findSplitColon(trimmed);
             const tagPart = idx !== -1 ? trimmed.slice(0, idx).trim() : trimmed.trim();
             const inline = idx !== -1 ? trimmed.slice(idx + 1).trim() : "";
+            
+            // Handle 'slot' keyword
+            if (tagPart.startsWith('slot')) {
+                let slotName = "children";
+                const sm = tagPart.match(/slot\s+(\w+)/);
+                if (sm) slotName = sm[1];
+                if (!manifest.slots.includes(slotName)) manifest.slots.push(slotName);
+                
+                const node: ViewNode = { type: 'slot', content: slotName, children: [], line: token.line };
+                context.children.push(node);
+                continue;
+            }
+
             let tagSide = tagPart;
             let eventSide = "";
             if (tagPart.includes('->')) {
@@ -289,14 +302,11 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
 export function generateLogicClass(manifest: ComponentManifest): string {
     let code = `export class ${manifest.name}Logic {
 `;
-    manifest.state.forEach(s => code += `  ${s.id} = $state(${s.value});
-`);
-    manifest.props.forEach(p => code += `  ${p.id} = $state(${p.value});
-`);
+    manifest.state.forEach(s => code += `  ${s.id} = $state(${s.value});\n`);
+    manifest.props.forEach(p => code += `  ${p.id} = $state(${p.value});\n`);
     manifest.reactive.forEach(r => {
         const expr = r.expression.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
-        code += `  ${r.id} = $derived(${expr});
-`;
+        code += `  ${r.id} = $derived(${expr});\n`;
     });
 
     manifest.functions.forEach(f => {
@@ -342,7 +352,7 @@ export function generateLogicClass(manifest: ComponentManifest): string {
         code += `  }
 `;
     }
-
+    
     return code + `}
 `;
 }
@@ -353,19 +363,26 @@ export function generateLogicClass(manifest: ComponentManifest): string {
 export function generateSvelte5(manifest: ComponentManifest): string {
     let script = `<script lang="ts">
 `;
-    manifest.imports.forEach(i => script += `  import ${i.name} from "${i.path}";
-`);
+    manifest.imports.forEach(i => script += `  import ${i.name} from "${i.path}";\n`);
     script += `  import { ${manifest.name}Logic } from "./${manifest.name}.viand.logic.svelte";
 `;
-    if (manifest.props.length > 0) script += `  let { ${manifest.props.map(p => `${p.id} = $bindable(${p.value})`).join(', ')} } = $props();
-`;
+    
+    const propNames = manifest.props.map(p => p.id);
+    if (manifest.slots.length > 0) {
+        manifest.slots.forEach(s => { if (!propNames.includes(s)) propNames.push(s); });
+    }
+    
+    if (propNames.length > 0) {
+        script += `  let { ${propNames.map(id => {
+            const p = manifest.props.find(x => x.id === id);
+            return p ? `${id} = $bindable(${p.value})` : id;
+        }).join(', ')} } = $props();\n`;
+    }
+    
     script += `  const $ = new ${manifest.name}Logic();
 `;
-    manifest.props.forEach(p => script += `  $effect(() => { $.${p.id} = ${p.id}; });
-`);
-    script += `</script>
-
-`;
+    manifest.props.forEach(p => script += `  $effect(() => { $.${p.id} = ${p.id}; });\n`);
+    script += `</script>\n\n`;
 
     const renderNode = (node: ViewNode, indent: string, localVars: string[] = []): string => {
         if (node.type === 'text') {
@@ -376,13 +393,16 @@ export function generateSvelte5(manifest: ComponentManifest): string {
             });
             return `${indent}${content}\n`;
         }
+        if (node.type === 'slot') {
+            return `${indent}{@render ${node.content}()}\n`;
+        }
         if (node.type === 'element') {
             const attrParts = Object.entries(node.attrs || {}).map(([k, v]) => {
                 let val = v;
                 if (v.startsWith('$')) {
                     const varPath = v.slice(1);
                     const rootVar = varPath.split('.')[0];
-                    val = localVars.includes(rootVar) ? `{${varPath}}` : `{$.${varPath}}`;
+                    val = localVars.includes(rootVar) ? `{${varPath}}` : `{$.${rootVar}}`;
                 }
                 else if (k.startsWith('bind:')) {
                     const rootVar = v.split('.')[0];
@@ -395,12 +415,51 @@ export function generateSvelte5(manifest: ComponentManifest): string {
             });
             const attrStr = attrParts.length > 0 ? ' ' + attrParts.join(' ') : '';
             const tag = node.tag ? node.tag.toLowerCase() : 'div';
-            if (['input', 'img', 'br', 'hr'].includes(tag)) return `${indent}<${node.tag}${attrStr} />\n`;
-            return `${indent}<${node.tag}${attrStr}>\n${node.children.map(c => renderNode(c, indent + "  ", localVars)).join('')}${indent}</${node.tag}>\n`;
+            const isComponent = node.tag && node.tag[0] === node.tag[0].toUpperCase();
+            
+            if (['input','img','br','hr'].includes(tag)) return `${indent}<${node.tag}${attrStr} />\n`;
+            
+            let childrenStr = "";
+            if (node.children.length > 0) {
+                if (isComponent) {
+                    childrenStr += `${indent}  {#snippet children()}
+`;
+                    childrenStr += node.children.map(c => renderNode(c, indent + "    ", localVars)).join('');
+                    childrenStr += `${indent}  {/snippet}\n`;
+                } else {
+                    childrenStr += node.children.map(c => renderNode(c, indent + "  ", localVars)).join('');
+                }
+            }
+            
+            return `${indent}<${node.tag}${attrStr}>
+${childrenStr}${indent}</${node.tag}>
+`;
         }
         if (node.type === 'each') {
             const newLocalVars = [...localVars, node.item!];
             return `${indent}{#each $.${node.list} as ${node.item}}\n${node.children.map(c => renderNode(c, indent + "  ", newLocalVars)).join('')}${indent}{/each}\n`;
+        }
+        if (node.type === 'if') {
+            let out = `${indent}{#if ${cleanLogic(node.condition!)}}
+${node.children.map(c => renderNode(c, indent + "  ", localVars)).join('')}`;
+            if (node.alternate) {
+                if (node.alternate.condition === 'true') out += `${indent}{:else}\n${node.alternate.children.map(c => renderNode(c, indent + "  ", localVars)).join('')}`; 
+                else out += `${indent}{:else if ${cleanLogic(node.alternate.condition!)}}
+${node.alternate.children.map(c => renderNode(c, indent + "  ", localVars)).join('')}`;
+            }
+            return out + `${indent}{/if}\n`;
+        }
+        if (node.type === 'match') {
+            const rawExpr = node.expression!.startsWith('$') ? node.expression!.slice(1) : node.expression!;
+            const rootVar = rawExpr.split('.')[0];
+            const e = localVars.includes(rootVar) ? rawExpr : `$.${rawExpr}`;
+            let out = "";
+            node.cases!.forEach((c, i) => {
+                const header = i === 0 ? `{#if ${e} === ${c.condition}}` : `{:else if ${e} === ${c.condition}}`;
+                out += `${indent}${header}\n${c.children.map(child => renderNode(child, indent + "  ", localVars)).join('')}`;
+            });
+            if (node.defaultCase) out += `${indent}{:else}\n${node.defaultCase.children.map(child => renderNode(child, indent + "  ", localVars)).join('')}`;
+            return out + `${indent}{/if}\n`;
         }
         return "";
     };
@@ -435,10 +494,11 @@ export function generateTests(manifest: ComponentManifest): string {
                 let expr = line.expression.replace(/\$([a-zA-Z0-9_]+)/g, '$.$1');
                 code += `    expect(${expr}).toBeTruthy();\n`;
             } else if (typeof line === 'string') {
-                if (line.trim().startsWith('#')) return;
+                const trimmedLine = line.trim();
+                if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('//')) return;
                 let cleaned = line.replace(/\$([a-zA-Z0-9_]+)/g, '$.$1');
                 manifest.functions.forEach(f => {
-                    const regex = new RegExp(`\\b${f.name}\\(`, 'g');
+                    const regex = new RegExp(`\b${f.name}\(`, 'g');
                     if (!cleaned.includes(`$.${f.name}(`)) cleaned = cleaned.replace(regex, `$.${f.name}(`);
                 });
                 code += `    ${cleaned};\n`;
