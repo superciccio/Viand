@@ -37,3 +37,4 @@ component App:
         input:
             flex: 1
             padding: 8px
+// trigger

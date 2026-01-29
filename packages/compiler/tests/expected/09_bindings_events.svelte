@@ -1,5 +1,6 @@
 <script lang="ts">
-  let text: string = "";
+  let text: string = $state("");
+
   function handleSubmit() {
     text = "Submitted";
   }
@@ -7,7 +8,13 @@
 
 <form on:submit|preventDefault={handleSubmit}>
   <input bind:value={text} placeholder="Type here" />
-  <button>Submit</button>
-  <button on:click={handleSubmit}>Explicit Click</button>
-  <button on:click={handleSubmit}>Shorthand Click</button>
+  <button>
+    Submit
+  </button>
+  <button on:click={handleSubmit}>
+    Explicit Click
+  </button>
+  <button on:click={handleSubmit}>
+    Shorthand Click
+  </button>
 </form>

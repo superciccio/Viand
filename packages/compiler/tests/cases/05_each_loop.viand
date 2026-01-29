@@ -1,5 +1,5 @@
 component TodoList:
-    $todos: any = []
+    $todos: array = []
     
     view:
         ul:

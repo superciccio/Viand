@@ -1,9 +1,11 @@
 <script lang="ts">
-  let todos: any = [];
+  let todos: any[] = $state([]);
 </script>
 
 <ul>
   {#each todos as item}
-    <li>{item.text}</li>
+    <li>
+      {item.text}
+    </li>
   {/each}
 </ul>

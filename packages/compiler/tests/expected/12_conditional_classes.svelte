@@ -1,5 +1,7 @@
 <script lang="ts">
-  let isActive: boolean = true;
+  let isActive: boolean = $state(true);
 </script>
 
-<div class="box" class:active={isActive}>Status Box</div>
+<div class:active={isActive} class="box">
+  Status Box
+</div>

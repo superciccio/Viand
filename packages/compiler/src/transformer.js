@@ -1,71 +1,44 @@
-/**
- * Static Type Validation Law
- */
-function validateTypeAssignment(name, type, value, line, reports) {
-    const val = value?.trim() || "";
-    
-    if (type === 'any') {
-        console.warn(`⚠️  Warning at Line ${line}: Using "any" defeats the purpose of Viand. Be careful!`);
-        return;
-    }
-
-    if (type === 'array') {
-        const isArrayLiteral = val.startsWith('[') && val.endsWith(']');
-        const isVarReference = val.startsWith('$');
-        if (!isArrayLiteral && !isVarReference) {
-             reports.push(`Line ${line}: Type Error. "$${name}" is declared as array but assigned a non-array value.`);
-        }
-    }
-
-    if (type === 'number') {
-        const isStringLiteral = val.startsWith('"') || val.startsWith("'");
-        if (isStringLiteral || (isNaN(val) && !val.startsWith('$'))) {
-            reports.push(`Line ${line}: Type Error. "$${name}" is declared as number but assigned "${val}".`);
-        }
-    }
-    if (type === 'string') {
-        const isStringLiteral = val.startsWith('"') || val.startsWith("'");
-        const isVarReference = val.startsWith('$');
-        const isConcatenation = val.includes('+');
-        if (!isStringLiteral && !isVarReference && !isConcatenation) {
-            reports.push(`Line ${line}: Type Error. "$${name}" is declared as string but assigned a non-string value.`);
-        }
-    }
-}
+import { createComponentManifest, ViewNode } from './manifest.js';
 
 /**
  * Helper to strip quotes and convert $var to {var} for Svelte prose
  */
 function cleanViandText(text) {
+    if (typeof text !== 'string') return text;
     let cleaned = text.trim();
+    // Handle concatenation like "Welcome " + $user
     cleaned = cleaned.replace(/["']\s*\+\s*/g, '').replace(/\+\s*["']/g, '').replace(/["']/g, '');         
-    cleaned = cleaned.replace(/\$([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)*)/g, '{$1}');
+    // Interpolate variables: $user -> {user}
+    cleaned = cleaned.replace(/\$([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_.]+)*)/g, '{$1}');
     return cleaned;
 }
 
 /**
- * Helper to strip $ for logic expressions (if/each)
+ * Helper to strip $ for logic expressions (if/each/js)
+ * PROTECTS Svelte 5 Runes ($state, $derived, etc)
  */
 function cleanLogicExpression(text) {
-    return text.trim().replace(/\$([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)*)/g, '$1');
+    if (typeof text !== 'string') return text;
+    const runes = ['state', 'derived', 'props', 'effect', 'inspect', 'host'];
+    // Match $ followed by a variable name (including dots for property access)
+    return text.replace(/\$([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_.]+)*)/g, (match, p1) => {
+        // If the variable name is a Svelte Rune, keep the $
+        const root = p1.split('.')[0];
+        if (runes.includes(root)) return match;
+        // Otherwise, strip the $
+        return p1;
+    });
 }
 
 function findSplitColon(text) {
     let depth = 0;
     let inQuote = false;
     let quoteChar = null;
-
     for (let i = 0; i < text.length; i++) {
         const char = text[i];
-        if (inQuote) {
-            if (char === quoteChar) {
-                inQuote = false;
-            }
-        } else {
-            if (char === '"' || char === "'") {
-                inQuote = true;
-                quoteChar = char;
-            } else if (char === '(') depth++;
+        if (inQuote) { if (char === quoteChar) inQuote = false; } else {
+            if (char === '"' || char === "'") { inQuote = true; quoteChar = char; }
+            else if (char === '(') depth++;
             else if (char === ')') depth--;
             else if (char === ':' && depth === 0) return i;
         }
@@ -73,284 +46,361 @@ function findSplitColon(text) {
     return -1;
 }
 
-export function transform(tree, lexerErrors = []) {
+/**
+ * PHASE 1: BUILDER (Tokens -> Manifest)
+ */
+function buildManifest(tree, lexerErrors) {
+    const manifest = createComponentManifest();
     const reports = [...lexerErrors];
-    let scriptBlock = "";
-    let viewBlock = "";
-    let styleBlock = "";
-    let tagStack = [];
-
-    if (!tree.some(t => t.type === 'VIEW_ROOT')) {
-        reports.push("Structure Error: Missing 'view:' block.");
-    }
+    const stack = [{ type: 'root', children: manifest.view, depth: -1 }]; 
 
     for (let i = 0; i < tree.length; i++) {
         const token = tree[i];
-        const nextToken = tree[i + 1];
+        const trimmed = token.content.trim();
 
-        // --- CONTEXT CHECK ---
-        const isStyle = tagStack.some(s => s.type === 'STYLE_CONTEXT' || s.type === 'STYLE_RULE');
-        const isInsideFunction = tagStack.some(s => s.name === 'FUNCTION_CLOSURE' || s.type === 'JS_BLOCK');
+        if (token.type === 'COMPONENT_DECL') {
+            const match = trimmed.match(/component\s+(\w+)/);
+            if (match) manifest.name = match[1];
+            continue;
+        }
 
-        // 1. HIGH-PRIORITY KEYWORDS (Imports, Props, State, Reactive, Functions, StyleRoot)
-        // These should always be parsed regardless of context (except perhaps Functions)
-        
         if (token.type === 'IMPORT_DECLARATION') {
-            const importMatch = token.content.match(/use\s+(\w+)\s+from\s+["'](.*)\.viand["']/);
-            if (importMatch) {
-                const [_, name, path] = importMatch;
-                scriptBlock += `  import ${name} from "${path}.svelte";\n`;
-            }
+            const match = trimmed.match(/use\s+(\w+)\s+from\s+["'](.*?)["']/);
+            if (match) manifest.imports.push({ name: match[1], path: match[2] });
             continue;
         }
 
         if (token.type === 'PROP_DECLARATION') {
-            const propMatch = token.content.match(/@prop\s+\$?([a-z_]\w*)\s*(?::\s*([a-z]+))?\s*(?:=\s*(.*))?/i);
-            if (propMatch) {
-                const [_, name, type, value] = propMatch;
-                const tsType = type === 'array' ? 'any[]' : type;
-                scriptBlock += `  export let ${name}${tsType ? `: ${tsType}` : ""} = ${value || 'undefined'};
-`;
+            const match = trimmed.match(/@prop\s+\$?([a-z_]\w*)/i);
+            if (match) {
+                const id = match[1];
+                let type = 'any';
+                let value = 'undefined';
+                const typeMatch = trimmed.match(/:\s*([a-z0-9_[\]]+)/i);
+                if (typeMatch) type = typeMatch[1];
+                const valMatch = trimmed.match(/=\s*(.*)$/);
+                if (valMatch) value = valMatch[1].trim();
+                manifest.props.push({ id, type, value });
             }
             continue;
         }
 
         if (token.type === 'STATE_VARIABLE') {
-            if (isInsideFunction) {
-                scriptBlock += `    ${cleanLogicExpression(token.content)};\n`;
+            const context = stack[stack.length - 1];
+            const isInsideScript = context.type === 'function' || context.type === 'js-block';
+            
+            if (isInsideScript) {
+                context.body.push(token.content);
             } else {
-                const typeMatch = token.content.match(/^\$([a-z_]\w*)\s*(?::\s*([a-z]+))?\s*=\s*(.*)/i);
-                if (typeMatch) {
-                    const [_, name, type, value] = typeMatch;
-                    if (type) validateTypeAssignment(name, type, value, token.line, reports);
-                    const tsType = type === 'array' ? 'any[]' : type;
-                    scriptBlock += `  let ${name}${tsType ? `: ${tsType}` : ""} = ${value};
-`;
+                const match = trimmed.match(/^\$([a-z_]\w*)/i);
+                if (match) {
+                    const id = match[1];
+                    let type = 'any';
+                    let value = 'undefined';
+                    const typeMatch = trimmed.match(/:\s*([a-z0-9_[\]]+)/i);
+                    if (typeMatch) type = typeMatch[1];
+                    const valMatch = trimmed.match(/=\s*(.*)$/);
+                    if (valMatch) value = valMatch[1].trim();
+                    manifest.state.push({ id, type, value });
                 }
             }
             continue;
         }
 
         if (token.type === 'REACTIVE_DECLARATION') {
-            const syncMatch = token.content.match(/^sync\s+\$([a-z_]\w*)\s*=\s*(.*)/i);
-            if (syncMatch) {
-                const [_, name, value] = syncMatch;
-                scriptBlock += `  $: ${name} = ${cleanLogicExpression(value)};\n`;
-            }
+            const match = trimmed.match(/^sync\s+\$([a-z_]\w*)\s*=\s*(.*)/i);
+            if (match) manifest.reactive.push({ id: match[1], expression: match[2] });
             continue;
         }
 
         if (token.type === 'FUNCTION_ACTION') {
-            const funcMatch = token.content.match(/fn\s+(\w+)\s*\((.*?)\)/);
-            if (funcMatch) {
-                const [_, name, params] = funcMatch;
-                scriptBlock += `  function ${name}(${params}) {
-`;
-                tagStack.push({ name: 'FUNCTION_CLOSURE', type: 'JS_BLOCK', depth: token.depth });
+            const match = trimmed.match(/fn\s+(\w+)\s*\((.*?)\)/);
+            if (match) {
+                const func = { type: 'function', name: match[1], params: match[2].split(',').map(p => p.trim()).filter(p => p), body: [], depth: token.depth };
+                manifest.functions.push(func);
+                stack.push(func);
             }
             continue;
         }
 
         if (token.type === 'STYLE_ROOT') {
-            tagStack.push({ name: 'style', type: 'STYLE_CONTEXT', depth: token.depth });
+            stack.push({ type: 'style', depth: token.depth });
             continue;
         }
 
-        if (token.type === 'VIEW_ROOT') {
-            continue; 
+        // 2. HIERARCHY MANAGEMENT
+        while (stack.length > 1 && token.depth <= stack[stack.length - 1].depth) {
+            stack.pop();
         }
 
-        // 2. CONTEXT-SPECIFIC CONTENT
-        if (isStyle) {
-            if (token.type === 'EXPRESSION' && token.depth > 0) {
-                const indent = "  ".repeat(token.depth / 4);
-                if (token.content.endsWith(':')) {
-                    styleBlock += `${indent}${token.content.slice(0, -1)} {\n`;
-                    tagStack.push({ name: 'css-rule', type: 'STYLE_RULE', depth: token.depth });
-                } else {
-                    styleBlock += `${indent}${token.content};\n`;
+        const currentContext = stack[stack.length - 1];
+
+        // 3. CONTEXT-SPECIFIC PARSING
+        if (currentContext.type === 'style' || currentContext.type === 'style-rule') {
+            if (trimmed.endsWith(':')) {
+                const rule = { selector: trimmed.slice(0, -1), rules: [] };
+                manifest.styles.push(rule);
+                stack.push({ type: 'style-rule', rule, depth: token.depth });
+            } else {
+                const ruleContext = [...stack].reverse().find(s => s.type === 'style-rule');
+                if (ruleContext) ruleContext.rule.rules.push(trimmed);
+            }
+            continue;
+        }
+
+        if (currentContext.type === 'function' || currentContext.type === 'js-block') {
+            if (token.type === 'CONTROL_FLOW' && trimmed.startsWith('if ')) {
+                const block = { type: 'js-block', body: [trimmed], depth: token.depth };
+                currentContext.body.push(block);
+                stack.push(block);
+            } else {
+                currentContext.body.push(token.content);
+            }
+            continue;
+        }
+
+        // 4. VIEW TREE CONSTRUCTION
+        if (token.type === 'CONTROL_FLOW') {
+            if (trimmed.startsWith('each ')) {
+                const match = trimmed.match(/each\s+\$([a-z_]\w*)\s+in\s+\$([a-z_]\w*)/i);
+                if (match) {
+                    const node = ViewNode.each(match[2], match[1]);
+                    currentContext.children.push(node);
+                    stack.push({ type: 'view-node', children: node.children, depth: token.depth });
+                }
+            } else if (trimmed.startsWith('match ')) {
+                const varName = trimmed.replace('match ', '').replace(':', '').trim();
+                const node = ViewNode.match(varName);
+                currentContext.children.push(node);
+                stack.push({ type: 'match-root', node, depth: token.depth });
+            } else if (trimmed.startsWith('case ') && currentContext.type === 'match-root') {
+                const val = trimmed.replace('case ', '').replace(':', '').trim();
+                const caseNode = { condition: val, children: [] };
+                currentContext.node.cases.push(caseNode);
+                stack.push({ type: 'view-node', children: caseNode.children, depth: token.depth });
+            } else if (trimmed.startsWith('default') && currentContext.type === 'match-root') {
+                const defaultNode = { children: [] };
+                currentContext.node.defaultCase = defaultNode;
+                stack.push({ type: 'view-node', children: defaultNode.children, depth: token.depth });
+            } else if (trimmed.startsWith('if ')) {
+                const node = ViewNode.if(trimmed.replace('if ', '').replace(':', '').trim());
+                currentContext.children.push(node);
+                stack.push({ type: 'view-node', children: node.children, depth: token.depth, node });
+            } else if (trimmed.startsWith('else')) {
+                const lastNode = currentContext.children[currentContext.children.length - 1];
+                if (lastNode && lastNode.type === 'if') {
+                    const node = ViewNode.if(trimmed.startsWith('else if ') ? trimmed.replace('else if ', '').replace(':', '').trim() : 'true');
+                    lastNode.alternate = node;
+                    stack.push({ type: 'view-node', children: node.children, depth: token.depth });
                 }
             }
-            // Fall through to auto-closing
-        } else {
-            // 3. VIEW MODE (Control Flow & Elements)
-            if (token.type === 'CONTROL_FLOW') {
-                const indent = "  ".repeat(token.depth / 4);
-                const eachMatch = token.content.match(/each\s+\$([a-z_]\w*)\s+in\s+\$([a-z_]\w*)/i);
-                if (eachMatch) {
-                    const [_, itemVar, listVar] = eachMatch;
-                    viewBlock += `${indent}{#each ${listVar} as ${itemVar}}\n`;
-                    tagStack.push({ name: 'each', type: 'SVELTE_BLOCK', depth: token.depth });
-                    continue;
-                }
-                if (token.content.startsWith('match ')) {
-                    const varName = cleanLogicExpression(token.content.replace('match ', '').replace(':', ''));
-                    tagStack.push({ name: 'match', type: 'MATCH_ROOT', var: varName, hasStarted: false, depth: token.depth });
-                    continue;
-                }
-                if (token.content.startsWith('case ')) {
-                    const parent = tagStack[tagStack.length - 1];
-                    if (parent && parent.type === 'MATCH_ROOT') {
-                        const val = cleanLogicExpression(token.content.replace('case ', '').replace(':', ''));
-                        if (!parent.hasStarted) {
-                            viewBlock += `${indent}{#if ${parent.var} === ${val}}\n`;
-                            parent.hasStarted = true;
-                        } else {
-                            viewBlock += `${indent}{:else if ${parent.var} === ${val}}\n`;
-                        }
-                    }
-                    continue;
-                }
-                if (token.content.startsWith('default')) {
-                    viewBlock += `${indent}{:else}\n`;
-                    continue;
-                }
-                if (token.content.startsWith('if ')) {
-                    const condition = cleanLogicExpression(token.content.replace('if ', '').replace(':', ''));
-                    if (isInsideFunction) {
-                        scriptBlock += `${indent}  if (${condition}) {\n`;
-                        tagStack.push({ name: 'if', type: 'JS_BLOCK', depth: token.depth });
-                    } else {
-                        viewBlock += `${indent}{#if ${condition}}\n`;
-                        tagStack.push({ name: 'if', type: 'SVELTE_BLOCK', depth: token.depth });
-                    }
-                    continue;
-                }
-                if (token.content.startsWith('else if ')) {
-                    const condition = cleanLogicExpression(token.content.replace('else if ', '').replace(':', ''));
-                    if (isInsideFunction) scriptBlock += `${indent}  else if (${condition}) {\n`;
-                    else viewBlock += `${indent}{:else if ${condition}}\n`;
-                    continue;
-                }
-                if (token.content.startsWith('else')) {
-                    if (isInsideFunction) scriptBlock += `${indent}  else {\n`;
-                    else viewBlock += `${indent}{:else}\n`;
-                    continue;
-                }
+            continue;
+        }
+
+        if (token.type === 'UI_ELEMENT') {
+            const colonIndex = findSplitColon(trimmed);
+            const hasColon = colonIndex !== -1;
+            const fullTagPart = hasColon ? trimmed.slice(0, colonIndex).trim() : trimmed.trim();
+            const inlineContent = hasColon ? trimmed.slice(colonIndex + 1).trim() : "";
+
+            let tagSide = fullTagPart;
+            let eventSide = "";
+            if (fullTagPart.includes('->')) {
+                const parts = fullTagPart.split('->');
+                tagSide = parts[0].trim();
+                eventSide = parts[1].trim();
             }
 
-            if (token.type === 'UI_ELEMENT') {
-                const colonIndex = findSplitColon(token.content);
-                const hasColon = colonIndex !== -1;
-                const fullContent = hasColon ? token.content.slice(0, colonIndex).trim() : token.content.trim();
-                const inlineContent = hasColon ? token.content.slice(colonIndex + 1).trim() : "";
-                const indent = "  ".repeat(token.depth / 4);
+            const startParen = tagSide.indexOf('(');
+            const endParen = tagSide.lastIndexOf(')');
+            let tag = tagSide;
+            let attrs = {};
 
-                let tagSide = fullContent;
-                let eventSide = "";
-                let eventAttr = "";
-
-                if (fullContent.includes('->')) {
-                    const parts = fullContent.split('->');
-                    tagSide = parts[0].trim();
-                    eventSide = parts[1].trim();
-                }
-
-                let attrString = "";
-                let tagNameAndClasses = tagSide;
-                const startParen = tagSide.indexOf('(');
-                const endParen = tagSide.lastIndexOf(')');
-                
-                if (startParen !== -1 && endParen !== -1) {
-                    const rawAttrs = tagSide.slice(startParen + 1, endParen);
-                    tagNameAndClasses = tagSide.slice(0, startParen) + tagSide.slice(endParen + 1);
-                    attrString = " " + rawAttrs.split(',').map(p => {
-                        const parts = p.split(':');
-                        if (parts.length < 2) return "";
+            if (startParen !== -1 && endParen !== -1) {
+                tag = tagSide.slice(0, startParen).trim();
+                const rawAttrs = tagSide.slice(startParen + 1, endParen);
+                rawAttrs.split(',').forEach(p => {
+                    const parts = p.split(':');
+                    if (parts.length >= 2) {
                         let k = parts[0].trim();
                         let vParts = parts.slice(1);
-                        if ((k === 'bind' || k === 'class' || k === 'style') && vParts.length > 0) k += ':' + vParts.shift().trim();
-                        const v = vParts.join(':').trim();
-                        let cleanV = v;
-                        if (v.startsWith('$')) cleanV = `{${v.slice(1)}}`;
-                        else if (v === 'true' || v === 'false') cleanV = `{${v}}`;
-                        return `${k}=${cleanV}`;
-                    }).filter(s => s !== "").join(' ');
-                }
-
-                const tagName = tagNameAndClasses.split(/[ .]+/)[0].trim();
-                const classes = tagNameAndClasses.match(/\.([a-z0-9_-]+)/gi)?.map(c => c.slice(1)).join(' ') || "";
-                const classAttr = classes ? ` class="${classes}"` : "";
-
-                if (eventSide) {
-                    const explicitMatch = eventSide.match(/^([a-z0-9_\.]+)\s*\((.*?)\)$/i);
-                    if (explicitMatch) {
-                         const [_, evtName, handler] = explicitMatch;
-                         if (!handler.trim()) eventAttr = ` on:click={${evtName}}`;
-                         else {
-                             const svelteEvt = evtName.replace(/\./g, '|');
-                             eventAttr = ` on:${svelteEvt}={${handler}}`;
-                         }
-                    } else {
-                         const handler = eventSide.replace('()', '').trim();
-                         eventAttr = ` on:click={${handler}}`;
+                        if (['bind', 'class', 'style'].includes(k)) k += ':' + vParts.shift().trim();
+                        attrs[k] = vParts.join(':').trim();
                     }
-                }
+                });
+            }
 
-                const isComponent = /^[A-Z]/.test(tagName);
-                const isSelfClosing = ['input', 'img', 'br', 'hr'].includes(tagName.toLowerCase());
+            const tagParts = tag.split('.');
+            const actualTag = tagParts[0].trim();
+            if (tagParts.length > 1) attrs['class'] = tagParts.slice(1).join(' ').trim();
 
-                if (isComponent) {
-                    viewBlock += `${indent}<${tagName}${attrString} />\n`;
-                } else if (isSelfClosing) {
-                    viewBlock += `${indent}<${tagName}${classAttr}${eventAttr}${attrString} />\n`;
+            if (eventSide) {
+                const match = eventSide.match(/^([a-z0-9_.]+)\s*\((.*?)\)$/i);
+                if (match) {
+                    if (!match[2].trim()) attrs['on:click'] = match[1];
+                    else attrs[`on:${match[1].replace(/\./g, '|')}`] = match[2];
                 } else {
-                    let openingTag = `${indent}<${tagName}${classAttr}${eventAttr}${attrString}>`.replace(/\s+/g, ' ').replace(' >', '>');
-                    viewBlock += openingTag;
-                    if (inlineContent) viewBlock += `${cleanViandText(inlineContent)}</${tagName}>\n`;
-                    else {
-                        viewBlock += `\n`;
-                        tagStack.push({ name: tagName, type: 'HTML_TAG', depth: token.depth });
-                    }
+                    attrs['on:click'] = eventSide.replace('()', '').trim();
                 }
-                continue;
             }
 
-            if (token.type === 'EXPRESSION' && token.depth > 0) {
-                if (isInsideFunction) scriptBlock += `${"  ".repeat(token.depth / 4)}${cleanLogicExpression(token.content)}\n`;
-                else viewBlock += `${"  ".repeat(token.depth / 4)}${cleanViandText(token.content)}\n`;
+            const node = ViewNode.element(actualTag, attrs);
+            currentContext.children.push(node);
+            
+            if (inlineContent) {
+                node.children.push(ViewNode.text(inlineContent));
+            } else if (trimmed.endsWith(':')) {
+                stack.push({ type: 'view-node', children: node.children, depth: token.depth });
             }
+            continue;
         }
 
-        // --- AUTO-CLOSING ---
-        if (nextToken) {
-            while (tagStack.length > 0 && tagStack[tagStack.length - 1].depth >= nextToken.depth) {
-                const closing = tagStack.pop();
-                if (closing.name === 'if' && nextToken.content.trim().startsWith('else')) {
-                    tagStack.push(closing);
-                    break;
-                }
-
-                if (closing.type === 'JS_BLOCK') scriptBlock += `${"  ".repeat(closing.depth / 4)}}
-`;
-                else if (closing.type === 'SVELTE_BLOCK') viewBlock += `${"  ".repeat(closing.depth / 4)}{/${closing.name}}\n`;
-                else if (closing.type === 'MATCH_ROOT') viewBlock += `${"  ".repeat(closing.depth / 4)}{/if}\n`;
-                else if (closing.type === 'STYLE_RULE') styleBlock += `${"  ".repeat(closing.depth / 4)}}
-`;
-                else if (closing.type === 'STYLE_CONTEXT') {} 
-                else viewBlock += `${"  ".repeat(closing.depth / 4)}</${closing.name}>\n`;
-            }
+        if (token.type === 'EXPRESSION' && token.depth > 0 && trimmed !== 'view:') {
+            currentContext.children.push(ViewNode.text(trimmed));
         }
     }
 
-    while (tagStack.length > 0) {
-        const closing = tagStack.pop();
-        if (closing.type === 'JS_BLOCK') scriptBlock += `${"  ".repeat(closing.depth / 4)}}
+    return { manifest, reports };
+}
+
+/**
+ * PHASE 2: GENERATOR (Manifest -> Svelte 5)
+ */
+function generateSvelte5(manifest) {
+    let script = `<script lang="ts">
 `;
-        else if (closing.type === 'SVELTE_BLOCK') viewBlock += `${"  ".repeat(closing.depth / 4)}{/${closing.name}}\n`;
-        else if (closing.type === 'MATCH_ROOT') viewBlock += `${"  ".repeat(closing.depth / 4)}{/if}\n`;
-        else if (closing.type === 'STYLE_RULE') styleBlock += `${"  ".repeat(closing.depth / 4)}}
+
+    if (manifest.imports.length > 0) {
+        manifest.imports.forEach(i => {
+            script += `  import ${i.name} from "${i.path}";
 `;
-        else if (closing.type === 'STYLE_CONTEXT') {} 
-        else viewBlock += `${"  ".repeat(closing.depth / 4)}</${closing.name}>\n`;
+        });
     }
 
+    if (manifest.props.length > 0) {
+        script += `  let { ${manifest.props.map(p => `${p.id} = $bindable(${p.value})`).join(', ')} } = $props();\n`;
+    }
+
+    manifest.state.forEach(s => {
+        const tsType = s.type === 'array' ? 'any[]' : s.type;
+        script += `  let ${s.id}: ${tsType} = $state(${s.value});
+`;
+    });
+
+    manifest.reactive.forEach(r => {
+        script += `  let ${r.id} = $derived(${cleanLogicExpression(r.expression)});
+`;
+    });
+
+    manifest.functions.forEach(f => {
+        script += `
+  function ${f.name}(${f.params.join(', ')}) {
+`;
+        const renderBody = (body, indent = "    ") => {
+            return body.map(line => {
+                if (typeof line === 'string') return `${indent}${cleanLogicExpression(line)};\n`;
+                // Transform Viand 'if cond:' -> JS 'if (cond) {'
+                const rawHeader = line.body[0].trim();
+                const jsHeader = rawHeader.replace(/^if\s+(.*):$/, 'if ($1) {');
+                const header = cleanLogicExpression(jsHeader);
+                return `${indent}${header}\n${renderBody(line.body.slice(1), indent + "  ")}${indent}}\n`;
+            }).join('');
+        };
+        script += renderBody(f.body);
+        script += `  }
+`;
+    });
+
+    script += `</script>
+
+`;
+
+    const renderNode = (node, indent = "") => {
+        if (node.type === 'text') return `${indent}${cleanViandText(node.content)}\n`;
+        
+        if (node.type === 'element') {
+            const attrParts = Object.entries(node.attrs).map(([k, v]) => {
+                let val;
+                if (v.startsWith('$')) val = `{${v.slice(1)}}`;
+                else if (k.startsWith('on:')) val = `{${v}}`;
+                else if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'" ) && v.endsWith("'" ))) val = v;
+                else val = `"${v}"`;
+                return `${k}=${val}`;
+            });
+            const attrString = attrParts.length > 0 ? ' ' + attrParts.join(' ') : '';
+            
+            const isSelfClosing = ['input', 'img', 'br', 'hr'].includes(node.tag.toLowerCase());
+            if (isSelfClosing) return `${indent}<${node.tag}${attrString} />\n`;
+            
+            return `${indent}<${node.tag}${attrString}>
+${node.children.map(c => renderNode(c, indent + "  ")).join('')}${indent}</${node.tag}>
+`;
+        }
+
+        if (node.type === 'each') {
+            const list = cleanLogicExpression(node.list);
+            const item = cleanLogicExpression(node.item);
+            return `${indent}{#each ${list} as ${item}}
+${node.children.map(c => renderNode(c, indent + "  ")).join('')}${indent}{/each}
+`;
+        }
+
+        if (node.type === 'if') {
+            let out = `${indent}{#if ${cleanLogicExpression(node.condition)}}
+${node.children.map(c => renderNode(c, indent + "  ")).join('')}`;
+            if (node.alternate) {
+                if (node.alternate.condition === 'true') out += `${indent}{:else}
+${node.alternate.children.map(c => renderNode(c, indent + "  ")).join('')}`;
+                else out += `${indent}{:else if ${cleanLogicExpression(node.alternate.condition)}}
+${node.alternate.children.map(c => renderNode(c, indent + "  ")).join('')}`;
+            }
+            return out + `${indent}{/if}
+`;
+        }
+
+        if (node.type === 'match') {
+            const expr = cleanLogicExpression(node.expression);
+            let out = "";
+            node.cases.forEach((c, i) => {
+                const header = i === 0 ? `{#if ${expr} === ${c.condition}}` : `{:else if ${expr} === ${c.condition}}`;
+                out += `${indent}${header}\n${c.children.map(child => renderNode(child, indent + "  ")).join('')}`;
+            });
+            if (node.defaultCase) {
+                out += `${indent}{:else}
+${node.defaultCase.children.map(child => renderNode(child, indent + "  ")).join('')}`;
+            }
+            out += `${indent}{/if}\n`;
+            return out;
+        }
+    };
+
+    const finalView = manifest.view.map(n => renderNode(n)).join('');
+
+    let style = "";
+    if (manifest.styles.length > 0) {
+        style = `\n<style>\n`;
+        manifest.styles.forEach(s => {
+            style += `  ${s.selector} {
+`;
+            s.rules.forEach(r => style += `    ${r};\n`);
+            style += `  }
+`;
+        });
+        style += `</style>\n`;
+    }
+
+    return script + finalView + style;
+}
+
+export function transform(tree, lexerErrors = []) {
+    const { manifest, reports } = buildManifest(tree, lexerErrors);
+    if (!manifest.name) manifest.name = "Component";
+    
     if (reports.length > 0) {
         console.error("\n🚫 VIAND COMPILER SCREAMED (" + reports.length + " issues):");
         reports.forEach(err => console.error(`   -> ${err}`));
         throw new Error("Compilation failed.");
     }
 
-    const svelteStyle = styleBlock ? `\n<style>\n${styleBlock}</style>\n` : "";
-    return `<script lang="ts">\n${scriptBlock}</script>\n\n${viewBlock}${svelteStyle}`;
+    return generateSvelte5(manifest);
 }
