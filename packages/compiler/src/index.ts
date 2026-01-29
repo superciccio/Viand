@@ -1,5 +1,9 @@
 import { tokenize, analyzeHierarchy } from './lexer.ts';
-import { transform, buildManifest, generateTests, generateLogicClass } from './transformer.ts';
+import { buildManifest } from './parser.ts';
+import { generateSvelte5 } from './renderers/svelte.ts';
+import { generateLogicClass } from './renderers/logic.ts';
+import { generateTests } from './renderers/test.ts';
+import { generateStaticHTML } from './renderers/static.ts';
 
 /**
  * Compiles Viand code to Svelte code.
@@ -7,7 +11,13 @@ import { transform, buildManifest, generateTests, generateLogicClass } from './t
 export function compile(code: string, sql: string = ""): string {
     const { tokens, lexerErrors } = tokenize(code);
     const tree = analyzeHierarchy(tokens);
-    return transform(tree, lexerErrors, sql);
+    const { manifest } = buildManifest(tree, lexerErrors, sql);
+    
+    if (manifest.isMemory) {
+        return generateLogicClass(manifest) + `\nexport default ${manifest.name};\n`;
+    }
+
+    return generateSvelte5(manifest);
 }
 
 /**
@@ -21,10 +31,19 @@ export function processViand(code: string, sql: string = "") {
     return {
         manifest,
         reports,
-        svelte: transform(tree, lexerErrors, sql),
+        svelte: generateSvelte5(manifest),
         logic: generateLogicClass(manifest),
-        tests: generateTests(manifest)
+        tests: generateTests(manifest),
+        static: generateStaticHTML(manifest)
     };
 }
 
-export { tokenize, analyzeHierarchy, buildManifest, generateTests, generateLogicClass };
+export { 
+    tokenize, 
+    analyzeHierarchy, 
+    buildManifest, 
+    generateSvelte5, 
+    generateLogicClass, 
+    generateTests,
+    generateStaticHTML
+};

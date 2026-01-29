@@ -1,5 +1,6 @@
 import { tokenize, analyzeHierarchy } from '../src/lexer.ts';
-import { buildManifest, generateTests } from '../src/transformer.ts';
+import { buildManifest } from '../src/parser.ts';
+import { generateTests } from '../src/renderers/test.ts';
 
 function assert(condition: boolean, message: string) {
     if (!condition) {

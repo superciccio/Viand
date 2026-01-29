@@ -1,10 +1,10 @@
 <script lang="ts">
   import { TodoListLogic } from "./TodoList.viand.logic.svelte";
-  const $ = new TodoListLogic();
+  const _ = new TodoListLogic();
 </script>
 
 <ul>
-  {#each $.todos as item}
+  {#each _.todos as item}
     <li>
       {item.text}
     </li>

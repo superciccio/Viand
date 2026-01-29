@@ -1,0 +1,7 @@
+use Shell from "./Shell.viand"
+
+component About:
+    view:
+        Shell:
+            h1: "About This Site"
+            p: "Viand can handle simple static-like sites without the SPA overhead."

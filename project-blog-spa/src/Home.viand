@@ -1,0 +1,7 @@
+use Shell from "./Shell.viand"
+
+component Home:
+    view:
+        Shell:
+            h1: "Viand SPA Blog"
+            p: "This is the SPA home. Navigation is instant and seamless."

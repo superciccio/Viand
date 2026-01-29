@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { State } from "./State.viand.logic.svelte";
+  import State from "./State.viand";
   import { ThemeToggleLogic } from "./ThemeToggle.viand.logic.svelte";
-  const $ = new ThemeToggleLogic();
+  const _ = new ThemeToggleLogic();
 </script>
 
-<button onclick={(...args) => State.toggle(...args)}>
+<button onclick={() => State.toggle()}>
   {State.theme}
 </button>

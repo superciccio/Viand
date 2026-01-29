@@ -1,8 +1,7 @@
 #!/usr/bin/env tsx
 import fs from 'fs';
 import path from 'path';
-import { tokenize, analyzeHierarchy } from './src/lexer.ts';
-import { transform } from './src/transformer.ts';
+import { tokenize, analyzeHierarchy, buildManifest, generateSvelte5 } from './src/index.ts';
 
 const CASES_DIR = './tests/cases';
 const PROJECT_SRC = '../../project-test/src';
@@ -22,7 +21,8 @@ async function runGauntlet() {
         try {
             const { tokens, lexerErrors } = tokenize(code);
             const tree = analyzeHierarchy(tokens);
-            const svelteOutput = transform(tree, lexerErrors);
+            const { manifest } = buildManifest(tree, lexerErrors);
+            const svelteOutput = generateSvelte5(manifest);
 
             if (!isExpectedToFail) {
                 const expectedPath = path.join('./tests/expected', file.replace('.viand', '.svelte'));
@@ -73,7 +73,8 @@ function buildProject() {
         const code = fs.readFileSync(inputPath, 'utf-8');
         const { tokens, lexerErrors } = tokenize(code);
         const tree = analyzeHierarchy(tokens);
-        const svelte = transform(tree, lexerErrors);
+        const { manifest } = buildManifest(tree, lexerErrors);
+        const svelte = generateSvelte5(manifest);
 
         fs.writeFileSync(outputPath, svelte);
         console.log(`🔨 Compiled: ${file} -> dist/`);

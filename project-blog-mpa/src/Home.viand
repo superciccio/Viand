@@ -1,0 +1,7 @@
+use Shell from "./Shell.viand"
+
+component Home:
+    view:
+        Shell:
+            h1: "Viand Multi-Page Blog"
+            p: "This is the home page. Every click triggers a full browser reload."

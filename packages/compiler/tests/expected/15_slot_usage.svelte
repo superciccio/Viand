@@ -1,7 +1,7 @@
 <script lang="ts">
   import Layout from "./Layout.viand";
   import { AppLogic } from "./App.viand.logic.svelte";
-  const $ = new AppLogic();
+  const _ = new AppLogic();
 </script>
 
 <Layout>

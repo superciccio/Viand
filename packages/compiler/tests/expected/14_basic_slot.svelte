@@ -1,7 +1,7 @@
 <script lang="ts">
   import { LayoutLogic } from "./Layout.viand.logic.svelte";
   let { children } = $props();
-  const $ = new LayoutLogic();
+  const _ = new LayoutLogic();
 </script>
 
 <div class="shell">

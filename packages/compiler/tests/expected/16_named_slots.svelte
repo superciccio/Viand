@@ -1,7 +1,7 @@
 <script lang="ts">
   import { SplitLogic } from "./Split.viand.logic.svelte";
   let { side, children } = $props();
-  const $ = new SplitLogic();
+  const _ = new SplitLogic();
 </script>
 
 <div class="left">

@@ -1,0 +1,7 @@
+use Shell from "./Shell.viand"
+
+component About:
+    view:
+        Shell:
+            h1: "About SPA"
+            p: "This version proves Viand can handle dynamic page swapping."

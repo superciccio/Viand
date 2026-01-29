@@ -22,44 +22,41 @@ This document tracks the strategic development milestones for the Viand language
 
 ## 🚩 Milestone 5.2: Integrated Native Testing [PARTIALLY COMPLETED]
 - [x] **`test` Block:** Root-level container for test suites.
-- [x] **`must` Keyword:** Clean assertion syntax (e.g., `must $count == 1`).
-- [x] **Brain-Body-Critic Architecture:** Shared reactive logic (.svelte.ts).
+- [x] **`must` Keyword:** Clean assertion syntax (e.g., `must find "button"`).
+- [x] **Brain-Body-Critic Architecture:** Shared reactive logic (.svelte.ts) for View and Test.
 - [x] **@logic Persona:** In-memory state testing via mirrored classes.
-- [ ] **@ui Persona:** Headless DOM verification.
-    - **Step 1:** Implement via Vitest + JSDOM (Simulated browser).
-    - **Note:** A custom "Ghost Renderer" (Option C) may be implemented later for deeper DSL integration.
+- [x] **@ui Persona:** Headless DOM verification (Vitest + JSDOM).
 - [ ] **@integration Persona:** Facade-based dependency mocking.
 
-## 🚩 Milestone 6: Sibling Resource Awareness [PARTIALLY COMPLETED]
+## 🚩 Milestone 6: Sibling Resource Awareness [COMPLETED]
 - [x] **SQL Sibling Scanning:** Look for `.sql` files matching component names.
 - [x] **Query Labeling:** Parse `-- label: name` markers in SQL files.
 - [x] **Resource Injection:** Make `sql.labelName()` available inside Viand functions.
 
-## 🚩 Milestone 7: Advanced Composition (The Shell Pillar)
-**Goal:** Enable reusable layouts and UI injection.
-- [ ] **`slot:` keyword:** Support for Svelte 5 snippets and slots.
-- [ ] **UI as Props:** Ability to pass Viand view-nodes into child components.
+## 🚩 Milestone 7: Advanced Composition (The Shell Pillar) [COMPLETED]
+- [x] **`slot:` keyword:** Support for Svelte 5 snippets and slots.
+- [x] **Auto-Snippets:** Indented children automatically wrapped in snippets.
+- [x] **UI as Props:** Passing Viand view-nodes into child components.
 
-## 🚩 Milestone 8: Global State (The Memory Pillar)
-**Goal:** Share data across components without prop-drilling.
-- [ ] **`global` keyword:** Define state that is accessible throughout the project.
-- [ ] **Shared Brains:** Components can import logic from other `.viand` logic files.
+## 🚩 Milestone 8: Global State (The Memory Pillar) [COMPLETED]
+- [x] **`memory` keyword:** Define shared reactive singletons.
+- [x] **Shared Brains:** Triple-file architecture ensuring 1:1 logic parity.
+- [x] **Smart Interpolation:** Automatic evaluation of global namespaces in views.
 
 ## 🚩 Milestone 9: Executive Routing (The Navigation Pillar)
 **Goal:** Build multi-page SPAs and Blogs natively.
 - [ ] **`page-router` block:** A high-level declarative router syntax.
 - [ ] **`goto()` action:** Built-in navigation primitive.
 
-## 🚩 Milestone 10: The Tauri Auto-Bridge (The Native Monster)
-**Goal:** Automate the Native/Web boundary.
-- [ ] **Zero-Rust Commands:** Generate Tauri Rust commands automatically based on SQL labels.
-- [ ] **Auto-Invoke:** Generate the `invoke()` calls in the generated logic.
-- [ ] **Native Plugin:** A Viand-Tauri plugin to handle generic data execution.
+## 🚩 Milestone 10: Static HTML Generation (The SSG Pillar)
+**Goal:** Turn Viand into a Page-First DSL (Jekyll/Hugo style).
+- [ ] **Zero-HTML Entry:** Generate full `index.html` documents directly from `.viand` files.
+- [ ] **Executive Build:** `viand build` produces a static `dist/` folder ready for deployment.
 
-## 🚩 Milestone 11: Universal Runtime (Browser Parity)
-- [ ] **Browser SQL Engine:** Provide WASM-SQLite for 1:1 SQL parity in the browser.
-- [ ] **Viand Dev Tools:** A dashboard to inspect Manifest and Native Bridge state.
+## 🚩 Milestone 11: The Tauri Auto-Bridge (The Native Monster)
+...
 
-## 🚩 Milestone 12: The Meta-Framework (@viand/framework)
-- [ ] **Single Dependency:** Wrap Vite, Svelte, and Tauri into one toolkit.
-- [ ] **CLI Scaffolding:** `viand create` for full-stack native apps.
+## 🚩 Milestone 13: Markdown Integration (The Content Pillar)
+**Goal:** Allow authoring content in pure Markdown inside Viand.
+- [ ] **`markdown:` block:** Support for standard MD with component embedding.
+- [ ] **Frontmatter Awareness:** Parse page metadata natively.

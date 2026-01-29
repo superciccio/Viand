@@ -1,0 +1,20 @@
+use Home from "./Home.viand"
+use About from "./About.viand"
+use NotFound from "./NotFound.viand"
+use Shell from "./Shell.viand"
+
+component App:
+    $path = "/"
+
+    # Simple hash-based router logic
+    fn init():
+        $path = window.location.hash.replace("#", "") || "/"
+        window.addEventListener("hashchange", () => {
+            $path = window.location.hash.replace("#", "") || "/"
+        })
+
+    view:
+        match $path:
+            case "/": Home
+            case "/about": About
+            default: NotFound
