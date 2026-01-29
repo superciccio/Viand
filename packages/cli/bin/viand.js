@@ -23,9 +23,17 @@ if (args[0] === 'dev') {
     files.forEach(file => {
         if (file.endsWith('.viand')) {
             const filePath = path.join(srcDir, file);
+            const sqlPath = filePath.replace('.viand', '.sql');
+            
             const code = fs.readFileSync(filePath, 'utf-8');
+            let sql = "";
+            if (fs.existsSync(sqlPath)) {
+                sql = fs.readFileSync(sqlPath, 'utf-8');
+                console.log(`🔍 Found SQL sibling: ${file.replace('.viand', '.sql')}`);
+            }
+
             try {
-                const { tests, logic } = processViand(code);
+                const { tests, logic } = processViand(code, sql);
                 if (logic) {
                     fs.writeFileSync(filePath.replace('.viand', '.viand.logic.svelte.ts'), logic);
                 }

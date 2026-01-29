@@ -86,4 +86,5 @@ export interface ComponentManifest {
     styles: ManifestStyle[];
     view: ViewNode[];
     tests: TestNode[];
+    queries: { label: string, query: string }[];
 }

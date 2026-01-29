@@ -41,7 +41,7 @@ export function tokenize(code: string) {
         const indentMatch = line.match(/^(\s*)/);
         const indent = indentMatch ? indentMatch[0].length : 0;
         
-        const content = line.split('//')[0].trim();
+        const content = line.split('//')[0].split('#')[0].trim();
         if (!content) return;
 
         if (indent % 4 !== 0) {

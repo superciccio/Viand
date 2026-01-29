@@ -7,8 +7,15 @@ component App:
 
     fn addTodo():
         if $newTodo.trim():
+            # CALLING THE SQL SIBLING!
+            sql.save($newTodo)
+            
             $todos = [...$todos, { text: $newTodo, done: false }]
             $newTodo = ""
+
+    fn loadData():
+        $todos = sql.loadAll()
+
 
     view:
         div .container:

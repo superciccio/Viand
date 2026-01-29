@@ -4,27 +4,27 @@ import { transform, buildManifest, generateTests, generateLogicClass } from './t
 /**
  * Compiles Viand code to Svelte code.
  */
-export function compile(code: string): string {
+export function compile(code: string, sql: string = ""): string {
     const { tokens, lexerErrors } = tokenize(code);
     const tree = analyzeHierarchy(tokens);
-    return transform(tree, lexerErrors);
+    return transform(tree, lexerErrors, sql);
 }
 
 /**
- * Full compilation process that returns manifest, svelte wrapper, shared logic, and optional tests.
+ * Full compilation process.
  */
-export function processViand(code: string) {
+export function processViand(code: string, sql: string = "") {
     const { tokens, lexerErrors } = tokenize(code);
     const tree = analyzeHierarchy(tokens);
-    const { manifest, reports } = buildManifest(tree, lexerErrors);
+    const { manifest, reports } = buildManifest(tree, lexerErrors, sql);
     
     return {
         manifest,
         reports,
-        svelte: transform(tree, lexerErrors),
+        svelte: transform(tree, lexerErrors, sql),
         logic: generateLogicClass(manifest),
         tests: generateTests(manifest)
     };
 }
 
-
+export { tokenize, analyzeHierarchy, buildManifest, generateTests, generateLogicClass };

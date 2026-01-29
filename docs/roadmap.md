@@ -21,15 +21,15 @@ This document tracks the strategic development milestones for the Viand language
 - [ ] **Compiler Validation:** Catch logic errors (e.g., undeclared variables) during IR build.
 - [ ] **Error Mapping:** Map Svelte errors back to Viand line numbers (Source Maps).
 
-## 🚩 Milestone 5.2: Integrated Native Testing
+## 🚩 Milestone 5.2: Integrated Native Testing [PARTIALLY COMPLETED]
 **Goal:** Make testing a first-class citizen of the Viand DSL.
-- [ ] **`test` Block:** Root-level container for test suites.
-- [ ] **`must` Keyword:** Clean assertion syntax (e.g., `must $count == 1`).
-- [ ] **Test Personas:**
-    - `@logic:` In-memory state testing.
-    - `@ui:` Headless DOM verification.
-    - `@integration:` Facade-based dependency mocking.
-- [ ] **VS Code Integration:** Export to standard formats for Test Explorer support.
+- [x] **`test` Block:** Root-level container for test suites.
+- [x] **`must` Keyword:** Clean assertion syntax (e.g., `must $count == 1`).
+- [x] **Brain-Body-Critic Architecture:** Shared reactive logic between Svelte and Vitest.
+- [x] **@logic Persona:** In-memory state testing via generated mirror classes.
+- [ ] **@ui Persona:** Headless DOM verification.
+- [ ] **@integration Persona:** Facade-based dependency mocking.
+- [x] **VS Code Integration:** File nesting for clean workspace ergonomics.
 
 ## 🚩 Milestone 6: Sibling Resource Awareness (The "Dream" Logic)
 **Goal:** Allow Viand to "swallow" external logic files.

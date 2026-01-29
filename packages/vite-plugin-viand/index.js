@@ -9,7 +9,13 @@ export default function viand() {
       if (!id.endsWith('.viand')) return null;
 
       try {
-        const svelte = compile(src);
+        const sqlPath = id.replace('.viand', '.sql');
+        let sql = "";
+        if (fs.existsSync(sqlPath)) {
+            sql = fs.readFileSync(sqlPath, 'utf-8');
+        }
+
+        const svelte = compile(src, sql);
         return {
           code: svelte,
           map: null
