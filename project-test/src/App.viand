@@ -37,4 +37,13 @@ component App:
         input:
             flex: 1
             padding: 8px
+
+test App:
+    @logic:
+        must $todos.length == 0
+        $newTodo = "Research Tauri"
+        addTodo()
+        must $todos.length == 1
+        must $todos[0].text == "Research Tauri"
+
 // trigger

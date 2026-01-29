@@ -7,9 +7,12 @@ export type TokenType =
     | 'FUNCTION_ACTION'
     | 'STYLE_ROOT'
     | 'VIEW_ROOT'
+    | 'TEST_ROOT'
+    | 'TEST_PERSONA'
     | 'CONTROL_FLOW'
     | 'UI_ELEMENT'
-    | 'EXPRESSION';
+    | 'EXPRESSION'
+    | 'MUST_ASSERTION';
 
 export interface Token {
     line: number;
@@ -60,6 +63,19 @@ export interface ViewNode {
     line: number;
 }
 
+export interface TestNode {
+    type: 'logic' | 'ui' | 'integration';
+    body: (string | MustAssertion)[];
+    line: number;
+    depth: number;
+}
+
+export interface MustAssertion {
+    type: 'must';
+    expression: string;
+    line: number;
+}
+
 export interface ComponentManifest {
     name: string;
     imports: { name: string, path: string }[];
@@ -69,4 +85,5 @@ export interface ComponentManifest {
     functions: ManifestFunction[];
     styles: ManifestStyle[];
     view: ViewNode[];
+    tests: TestNode[];
 }

@@ -1,0 +1,10 @@
+component Counter:
+    $count: number = 0
+    fn inc:
+        $count += 1
+
+test Counter:
+    @logic:
+        must $count == 0
+        inc()
+        must $count == 1

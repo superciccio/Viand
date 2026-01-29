@@ -3,44 +3,53 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { compile } from '../../compiler/src/index.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { spawn } from 'child_process';
+import { processViand } from '../../compiler/src/index.ts';
 
 console.log("🌿 Viand CLI v0.1.0");
 const args = process.argv.slice(2);
 
 if (args[0] === 'dev') {
-    const targetDir = path.resolve(process.cwd(), 'project-test/src');
+    const projectDir = path.resolve(process.cwd(), 'project-test');
+    const srcDir = path.join(projectDir, 'src');
     
-    if (!fs.existsSync(targetDir)) {
-        console.error(`❌ Error: Directory not found: ${targetDir}`);
+    if (!fs.existsSync(projectDir)) {
+        console.error(`❌ Error: Project directory not found: ${projectDir}`);
         process.exit(1);
     }
 
-    console.log(`Watching for .viand files in ${targetDir}...`);
-
-    fs.watch(targetDir, { recursive: true }, (eventType, filename) => {
-        if (filename && filename.endsWith('.viand')) {
-            const filePath = path.join(targetDir, filename);
-            if (!fs.existsSync(filePath)) return; // File might have been deleted
-
-            console.log(`🔨 Change detected: ${filename}`);
+    console.log(`🏗️  Performing pre-flight scan in ${srcDir}...`);
+    const files = fs.readdirSync(srcDir);
+    files.forEach(file => {
+        if (file.endsWith('.viand')) {
+            const filePath = path.join(srcDir, file);
+            const code = fs.readFileSync(filePath, 'utf-8');
             try {
-                const code = fs.readFileSync(filePath, 'utf-8');
-                const svelte = compile(code);
-                const outputPath = filePath.replace('.viand', '.svelte');
-                fs.writeFileSync(outputPath, svelte);
-                console.log(`✅ Recompiled: ${filename} -> .svelte`);
+                const { tests, logic } = processViand(code);
+                if (logic) {
+                    fs.writeFileSync(filePath.replace('.viand', '.viand.logic.svelte.ts'), logic);
+                }
+                if (tests) {
+                    fs.writeFileSync(filePath.replace('.viand', '.test.ts'), tests);
+                    console.log(`✅ Generated tests: ${file}`);
+                }
             } catch (e) {
-                console.error(`❌ Compilation failed for ${filename}:`);
-                console.error(e.message);
+                console.error(`❌ Pre-flight failed for ${file}: ${e.message}`);
             }
         }
     });
 
-    // Keep the process alive
-    process.stdin.resume();
+    console.log(`🚀 Starting Viand Dev Server in ${projectDir}...`);
+
+    const vite = spawn('npm', ['run', 'dev'], { 
+        cwd: projectDir, 
+        stdio: 'inherit',
+        shell: true 
+    });
+
+    vite.on('close', (code) => {
+        process.exit(code || 0);
+    });
 } else {
     console.log("Welcome to Viand. Try 'viand dev'");
 }

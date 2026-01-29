@@ -1,0 +1,7 @@
+{
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "*.viand": "${capture}.test.ts, ${capture}.viand.logic.svelte.ts"
+  }
+}

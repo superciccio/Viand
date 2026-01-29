@@ -1,0 +1,82 @@
+viand code
+
+component App:
+    $title: string = "Viand Task Manager (Live)"
+    $todos: array = []
+    $newTodo: string = ""
+
+    fn addTodo():
+        if $newTodo.trim():
+            $todos = [...$todos, { text: $newTodo, done: false }]
+            $newTodo = ""
+
+    view:
+        div .container:
+            h1: $title
+            
+            div .input-group:
+                input(bind:value: $newTodo, placeholder: "What needs to be done?")
+                button -> click(addTodo): "Add"
+
+            div .list:
+                each $todo in $todos:
+                    TodoItem(task: $todo.text, bind:done: $todo.done)
+                    
+component TodoItem:
+    @prop $task: string = ""
+    @prop $done: boolean = false
+
+    view:
+        div .todo-item(class:completed: $done):
+            input(type: "checkbox", bind:checked: $done)
+            span: $task
+
+    style:
+        .todo-item:
+            display: flex
+            align-items: center
+            gap: 10px
+            padding: 8px
+            border-bottom: 1px solid #eee
+
+        .completed:
+            text-decoration: line-through
+            color: #888
+            
+            
+            
+// type of test we might want to have
+
+// ui only 
+when checked completed is true (css is applied)
+
+// logic test (this is simply unit test within in memory)
+addTodo() test before and after
+
+// integration test with mock
+lets imagine our todo calls an api (where api means http)
+
+@external api save todo
+
+// we can in theory make viand smart aware that build a facade that acts a mock
+
+so a possible test file generate (with some code that the user than could add more tests if it wants)
+
+TodoItem.test.viand
+
+@ui
+
+
+@logic
+
+
+@integration
+
+
+
+  
+
+
+
+
+

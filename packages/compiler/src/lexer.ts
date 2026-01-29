@@ -1,4 +1,4 @@
-import { Token, TokenType } from './types';
+import { Token, TokenType } from './types.ts';
 
 export function identifyToken(content: string): TokenType {
     const trimmed = content.trim();
@@ -6,6 +6,9 @@ export function identifyToken(content: string): TokenType {
     if (trimmed.startsWith('component')) return 'COMPONENT_DECL';
     if (trimmed.startsWith('view:')) return 'VIEW_ROOT';
     if (trimmed.startsWith('style:')) return 'STYLE_ROOT';
+    if (trimmed.startsWith('test')) return 'TEST_ROOT';
+    if (trimmed.startsWith('must ')) return 'MUST_ASSERTION';
+    if (trimmed.startsWith('@logic') || trimmed.startsWith('@ui') || trimmed.startsWith('@integration')) return 'TEST_PERSONA';
     if (trimmed.startsWith('$')) return 'STATE_VARIABLE';
     if (trimmed.startsWith('@prop')) return 'PROP_DECLARATION';
     if (trimmed.startsWith('sync ')) return 'REACTIVE_DECLARATION';
