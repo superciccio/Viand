@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
 import { processViand } from '../../compiler/src/index.ts';
 import { renderToHtml } from './ssr-helper.js';
+import { runNitroDev } from './nitro-bridge.js';
 import { buildSync } from 'esbuild';
 import { register } from 'tsx/esm/api';
 
@@ -201,6 +202,9 @@ if (command === 'dev') {
 } else if (command === 'verify') {
     preflight();
     spawn('npx', ['vitest', 'run'], { cwd: projectRoot, stdio: 'inherit', shell: true });
+} else if (command === 'nitro-dev') {
+    preflight();
+    runNitroDev(projectRoot, srcDir);
 } else if (command === 'add' && args[2] === 'tailwind') {
     const install = spawn('npm', ['install', '-D', 'tailwindcss', '@tailwindcss/postcss', 'postcss', 'autoprefixer'], { cwd: projectRoot, stdio: 'inherit', shell: true });
     install.on('close', () => {
