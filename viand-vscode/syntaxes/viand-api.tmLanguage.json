@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Viand API",
+  "patterns": [
+    {
+      "name": "comment.line.double-dash.viand-api",
+      "match": "--.*$"
+    },
+    {
+      "name": "keyword.other.label.viand-api",
+      "match": "(?<=--\\s*label:\\s*)[a-zA-Z0-9_]+"
+    },
+    {
+      "name": "keyword.control.http.viand-api",
+      "match": "\\b(GET|POST|PUT|DELETE|PATCH)\\b"
+    },
+    {
+      "name": "string.other.path.viand-api",
+      "match": "(?<=(GET|POST|PUT|DELETE|PATCH)\\s+)/[a-zA-Z0-9\\./_-]+"
+    },
+    {
+      "name": "keyword.control.section.viand-api",
+      "match": "\\b(headers|query|mock):"
+    },
+    {
+      "name": "string.quoted.double.viand-api",
+      "begin": "\"",
+      "end": "\""
+    },
+    {
+      "name": "string.quoted.single.viand-api",
+      "begin": "'",
+      "end": "'"
+    },
+    {
+      "name": "constant.numeric.viand-api",
+      "match": "\\b\\d+\\b"
+    },
+    {
+      "name": "constant.language.boolean.viand-api",
+      "match": "\\b(true|false)\\b"
+    }
+  ],
+  "scopeName": "source.viand-api"
+}

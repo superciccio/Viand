@@ -11,7 +11,9 @@
     "engines": { "vscode": "^1.70.0" },
     "main": "./dist/extension.js",
     "activationEvents": [
-      "onLanguage:viand"
+      "onLanguage:viand",
+      "onLanguage:viand-api",
+      "onLanguage:viand-intl"
     ],
     "scripts": {
       "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
@@ -26,12 +28,38 @@
             "light": "./viand-icon.svg",
             "dark": "./viand-icon.svg"
           }
+        }, {
+          "id": "viand-api",
+          "aliases": ["Viand API", "viand-api"],
+          "extensions": [".api"],
+          "icon": {
+            "light": "./viand-icon.svg",
+            "dark": "./viand-icon.svg"
+          }
+        }, {
+          "id": "viand-intl",
+          "aliases": ["Viand Internationalization", "viand-intl"],
+          "extensions": [".lang"],
+          "icon": {
+            "light": "./viand-icon.svg",
+            "dark": "./viand-icon.svg"
+          }
         }],
     "grammars": [
       {
         "language": "viand",
         "scopeName": "source.viand",
         "path": "./syntaxes/viand.tmLanguage.json"
+      },
+      {
+        "language": "viand-api",
+        "scopeName": "source.viand-api",
+        "path": "./syntaxes/viand-api.tmLanguage.json"
+      },
+      {
+        "language": "viand-intl",
+        "scopeName": "source.viand-intl",
+        "path": "./syntaxes/viand-intl.tmLanguage.json"
       }
     ]
   },

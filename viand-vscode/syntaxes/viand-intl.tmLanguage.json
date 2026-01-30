@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Viand Intl",
+  "patterns": [
+    {
+      "name": "keyword.other.key.viand-intl",
+      "match": "^[a-zA-Z0-9_]+(?=:)"
+    },
+    {
+      "name": "constant.language.locale.viand-intl",
+      "match": "(?<=^\\s+)[a-z]{2}(?=:)"
+    },
+    {
+      "name": "string.quoted.double.viand-intl",
+      "begin": "\"",
+      "end": "\""
+    }
+  ],
+  "scopeName": "source.viand-intl"
+}
