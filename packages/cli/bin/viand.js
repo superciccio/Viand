@@ -4,13 +4,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
 import { processViand } from '../../compiler/src/index.ts';
+import { renderToHtml } from './ssr-helper.js';
+import { buildSync } from 'esbuild';
+import { register } from 'tsx/esm/api';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const args = process.argv.slice(2);
 const command = args[0];
-const targetDir = args[1] || '.';
+const nonFlagArgs = args.filter(arg => !arg.startsWith('--'));
+const targetDir = nonFlagArgs[1] || '.';
 const projectRoot = path.resolve(process.cwd(), targetDir);
 const srcDir = path.join(projectRoot, 'src');
 
@@ -22,11 +26,11 @@ if (!command) {
 
 function preflight() {
     console.log(`🏗️  Performing pre-flight scan in ${srcDir}...`);
-    
+
     // Inject Stdlib
-    [['router.ts', 'viand-router.ts'], 
-     ['notify.ts', 'viand-notify.ts'], 
-     ['intl.ts', 'viand-intl.ts']].forEach(([src, dest]) => {
+    [['router.ts', 'viand-router.ts'],
+    ['notify.ts', 'viand-notify.ts'],
+    ['intl.ts', 'viand-intl.ts']].forEach(([src, dest]) => {
         const srcPath = path.resolve(__dirname, '../../stdlib/src', src);
         const destPath = path.join(srcDir, dest);
         if (fs.existsSync(srcPath)) fs.copyFileSync(srcPath, destPath);
@@ -40,7 +44,7 @@ function preflight() {
             const sqlPath = filePath.replace('.viand', '.sql');
             const apiPath = filePath.replace('.viand', '.api');
             const langPath = filePath.replace('.viand', '.lang');
-            
+
             const code = fs.readFileSync(filePath, 'utf-8');
             const sql = fs.existsSync(sqlPath) ? fs.readFileSync(sqlPath, 'utf-8') : "";
             const api = fs.existsSync(apiPath) ? fs.readFileSync(apiPath, 'utf-8') : "";
@@ -63,22 +67,102 @@ if (command === 'dev') {
     preflight();
 } else if (command === 'bake') {
     preflight();
+    const enableSSR = args.includes('--ssr');
+    console.log(enableSSR ? '♨️  SSR Mode Enabled' : '🎨 Client-Side Rendering Mode');
+
     const distEntries = path.join(projectRoot, '_viand_bake');
     if (fs.existsSync(distEntries)) fs.rmSync(distEntries, { recursive: true, force: true });
     fs.mkdirSync(distEntries, { recursive: true });
-    
-    const inputs = [];
-    fs.readdirSync(srcDir).forEach(file => {
-        if (file.endsWith('.viand') && !file.startsWith('Shell')) {
-            const name = file.replace('.viand', '');
-            const entryPath = path.join(distEntries, name === 'Home' ? 'index.html' : `${name.toLowerCase()}/index.html`);
-            if (!fs.existsSync(path.dirname(entryPath))) fs.mkdirSync(path.dirname(entryPath), { recursive: true });
-            
-            const html = `<!DOCTYPE html><html><body><div id=\"app\"></div><script type=\"module\">import { mount } from \"@viand/runtime\"; import { ${name} } from \"../src/${file}\"; mount(document.getElementById(\"app\"), () => ${name}());</script></body></html>`;
-            fs.writeFileSync(entryPath, html);
-            inputs.push(name === 'Home' ? 'index.html' : `${name.toLowerCase()}/index.html`);
+
+    let ssrContentMap = {};
+    let collectedStyles = '';
+
+    if (enableSSR) {
+        console.log("♨️  Pre-heating the Oven (Transpiling components)...");
+        const allFiles = fs.readdirSync(srcDir).filter(f => f.endsWith('.viand') || (f.endsWith('.ts') && !f.includes('.ssr.tmp')));
+
+        const tmpDir = path.join(projectRoot, '.viand_tmp_ssr');
+        if (fs.existsSync(tmpDir)) fs.rmSync(tmpDir, { recursive: true, force: true });
+        fs.mkdirSync(tmpDir, { recursive: true });
+
+        for (const file of allFiles) {
+            const filePath = path.join(srcDir, file);
+            let code = fs.readFileSync(filePath, 'utf-8');
+            if (file.endsWith('.viand')) {
+                const { signals } = processViand(code);
+                code = signals;
+            }
+
+            // Map @viand/runtime to absolute path (use built .js for Node.js compatibility)
+            const runtimePath = path.resolve(__dirname, '../../runtime/dist/index.js');
+            code = code.replace(/from "@viand\/runtime"/g, `from "${runtimePath}"`);
+            // Also handle .viand imports by converting them to .js
+            code = code.replace(/from "(\.\.?\/[^"]+)\.viand"/g, 'from "$1.js"');
+            // Also handle .ts imports by converting them to .js
+            code = code.replace(/from "(\.\.?\/[^"]+)\.ts"/g, 'from "$1.js"');
+
+            const outPath = path.join(tmpDir, file.replace('.viand', '.js').replace('.ts', '.js'));
+
+            // Transpile TypeScript to JavaScript without bundling
+            buildSync({
+                stdin: {
+                    contents: code,
+                    resolveDir: tmpDir,
+                    sourcefile: file,
+                    loader: 'ts'
+                },
+                bundle: false,  // Don't bundle - just transpile
+                format: 'esm',
+                outfile: outPath,
+                platform: 'node',
+                target: 'node18'  // Target modern Node.js
+            });
         }
-    });
+
+        console.log("♨️  Baking static pages (SSR)...");
+        const viandFilesSSR = fs.readdirSync(srcDir).filter(f => f.endsWith('.viand'));
+
+        // Initialize style collection for SSR
+        global.__viand_styles = [];
+
+        for (const file of viandFilesSSR) {
+            if (!file.startsWith('Shell')) {
+                const name = file.replace('.viand', '');
+
+                try {
+                    const jsPath = path.join(tmpDir, file.replace('.viand', '.js'));
+                    const module = await import('file://' + jsPath);
+                    ssrContentMap[name] = module[name]();
+                } catch (e) {
+                    console.error(`❌ Failed to SSR ${name}:`, e);
+                    ssrContentMap[name] = "";
+                }
+            }
+        }
+
+        // Collect all styles
+        collectedStyles = global.__viand_styles.join('\n');
+        delete global.__viand_styles;
+
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    console.log("📄 Generating HTML pages...");
+    const viandFiles = fs.readdirSync(srcDir).filter(f => f.endsWith('.viand'));
+
+    for (const file of viandFiles) {
+        if (!file.startsWith('Shell')) {
+            const name = file.replace('.viand', '');
+            const entryDir = name === 'Home' ? distEntries : path.join(distEntries, name.toLowerCase());
+            if (!fs.existsSync(entryDir)) fs.mkdirSync(entryDir, { recursive: true });
+
+            const ssrContent = enableSSR ? (ssrContentMap[name] || "") : "";
+            const staticHtml = `<div id="app">${ssrContent}</div>`;
+            const styleTag = enableSSR && collectedStyles ? `<style>${collectedStyles}</style>` : '';
+            const html = `<!DOCTYPE html><html><head><title>Viand Baked: ${name}</title>${styleTag}</head><body>${staticHtml}<script type="module">import { mount } from "@viand/runtime"; import { ${name} } from "../src/${file}"; mount(document.getElementById("app"), () => ${name}());</script></body></html>`;
+            fs.writeFileSync(path.join(entryDir, 'index.html'), html);
+        }
+    }
 
     const config = `import { defineConfig } from 'vite'; import userConfig from './vite.config'; import { resolve } from 'path'; export default defineConfig({ ...userConfig, root: '_viand_bake', build: { outDir: '../dist', emptyOutDir: true } });`;
     fs.writeFileSync(path.join(projectRoot, 'vite.bake.config.ts'), config);

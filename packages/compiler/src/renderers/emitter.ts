@@ -14,9 +14,14 @@ export function emitJS(output: ComponentOutput): string {
     code += `\n`;
 
     if (output.css) {
-        code += `const style = document.createElement('style');\n`;
-        code += `style.textContent = \`${output.css}\`;\n`;
-        code += `document.head.appendChild(style);\n\n`;
+        // SSR-compatible style handling
+        code += `if (typeof document !== 'undefined') {\n`;
+        code += `  const style = document.createElement('style');\n`;
+        code += `  style.textContent = \`${output.css}\`;\n`;
+        code += `  document.head.appendChild(style);\n`;
+        code += `} else if (typeof global !== 'undefined' && global.__viand_styles) {\n`;
+        code += `  global.__viand_styles.push(\`${output.css}\`);\n`;
+        code += `}\n\n`;
     }
 
     if (output.lang && Object.keys(output.lang).length > 0) {
