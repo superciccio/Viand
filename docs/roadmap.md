@@ -79,6 +79,7 @@ Viand is built to surgically remove the friction found in modern frameworks (Nex
 ## 🚩 Milestone 18: Strategic Hardening (The Iron Fortress)
 **Goal:** Transition from prototype to reliable production toolkit.
 - [ ] **Source Maps:** Implement 1:1 error mapping from Browser -> `.viand` source.
+- [ ] **Nitro Integration:** Replace `bake --ssr` with a full-stack Nitro server engine for isomorphic sibling execution and multi-provider deployment.
 - [ ] **`viand create`:** Robust project scaffolder (SPA/MPA/Tauri).
 - [ ] **Validation Pass:** Catch undefined variables/functions during compilation.
 - [ ] **Pantry Growth:** Standard modules for `use auth`, `use storage`, and `use meta`.

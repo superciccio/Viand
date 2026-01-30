@@ -13,7 +13,7 @@ To win against Svelte and Vite, Viand must feel *even lighter* and *more transpa
 Next.js won because it unified the stack. Viand wins by **eliminating the friction of boilerplate.**
 
 - **Middleware Sibling:** `Home.middleware` for handling authentication and redirects before the component even renders.
-- **Data-Driven Routing:** Native support for `.sql` and `.api` siblings to automatically populate component state without `getStaticProps` or `fetch` calls.
+- **Isomorphic Nitro Engine:** Replace custom bake scripts with **Nitro** for a standardized server layer that runs on Vercel, Netlify, and Cloudflare.
 - **Partial Hydration (Islands):** The ability to pre-render 90% of a page as static HTML and only "wake up" the interactive widgets (e.g., a cart button or search bar), outperforming Next.js's heavy bundle sizes.
 
 ## 3. ✍️ The "Content King" (vs Hugo)
