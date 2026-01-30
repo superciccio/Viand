@@ -4,12 +4,19 @@ import { generateLogicClass } from './logic.ts';
 
 /**
  * ⚛️ Atomic Svelte 5 Renderer
- * Assembles the Brain (Logic) and Face (View) into a single Svelte component.
+ * Assembles Logic and View into a single, robust Svelte component.
  */
 export function generateSvelte5(manifest: ComponentManifest): string {
     if (manifest.isMemory) {
-        // Global state still needs its own file structure or a specific export pattern
-        return generateLogicClass(manifest) + `\nexport const ${manifest.name} = create${manifest.name}Logic({});\n`;
+        // Global state remains a closure-based factory but is exported as a singleton
+        return `<script lang="ts">
+  import { intl } from "./viand-intl.svelte.ts";
+  import { router } from "./viand-router.svelte.ts";
+` + 
+               generateLogicClass(manifest) + 
+               `  export const ${manifest.name} = create${manifest.name}Logic({});
+</script>
+`;
     }
 
     let script = `<script lang="ts">
@@ -17,7 +24,7 @@ export function generateSvelte5(manifest: ComponentManifest): string {
     script += `  import { onMount } from "svelte";
 `;
     
-    // 1. Standard Imports (Top Level)
+    // 1. Standard Library Imports
     manifest.imports.forEach(i => {
         if (i.path === 'viand:router') {
             script += `  import { router } from "./viand-router.svelte.ts";
@@ -38,14 +45,15 @@ export function generateSvelte5(manifest: ComponentManifest): string {
     });
 
     // 2. EMBEDDED LOGIC (The Brain)
-    script += `\n  // --- Viand Brain ---
+    script += `
+  // --- Viand Logic (Atomic Closure) ---
 `;
     script += generateLogicClass(manifest);
     
-    // 3. COMPONENT BRIDGE
-    script += `\n  // --- Component Face Bridge ---\n`;
-    script += `  let __props = $props();\n`;
-
+    // 3. COMPONENT INTERFACE
+    script += `
+  // --- Component Setup ---
+`;
     const propNames = manifest.props.map(p => p.id);
     manifest.slots.forEach(s => { if (!propNames.includes(s)) propNames.push(s); });
     
@@ -53,11 +61,14 @@ export function generateSvelte5(manifest: ComponentManifest): string {
         script += `  let { ${propNames.map(id => {
             const p = manifest.props.find(x => x.id === id);
             return p ? `${id} = $bindable(${p.value})` : id;
-        }).join(', ')} } = __props;\n`;
+        }).join(', ')} } = $props();
+`;
     }
 
     // Initialize Logic Factory with the shared props object
-    script += `  const _ = create${manifest.name}Logic(__props);\n`;
+    // Initialize Logic Factory with the shared props object
+    script += `  const _ = create${manifest.name}Logic(__props);
+`;
     
     if (manifest.onMount.length > 0) script += `  onMount(() => _.onMount());
 `;

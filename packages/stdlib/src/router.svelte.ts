@@ -1,32 +1,36 @@
 /**
  * 🛣️ Viand Isomorphic Router
- * Handles SPA navigation and reactive path tracking.
+ * Handles SPA navigation using Svelte Stores for total stability.
  */
+
+import { writable, get } from "svelte/store";
 
 const isBrowser = typeof window !== 'undefined';
 
 function createRouter() {
-  let _url = $state('/');
+  const _url = writable(isBrowser ? window.location.pathname : '/');
 
-  if (isBrowser) {
-    _url = window.location.pathname;
-    if (_url !== '/' && _url.endsWith('/')) _url = _url.slice(0, -1);
-    
-    window.addEventListener('popstate', () => {
-      let p = window.location.pathname;
-      if (p !== '/' && p.endsWith('/')) p = p.slice(0, -1);
-      _url = p;
-    });
+  function normalize(p) {
+    if (p === '/') return p;
+    return p.endsWith('/') ? p.slice(0, -1) : p;
   }
 
+  // Initial normalization
+  _url.update(p => normalize(p));
+
   return {
-    get path() { return _url; },
-    
+    // Svelte 5 handles store access via $router.path if we export the store,
+    // but for our logic bridge we use a getter.
+    get path() {
+      return get(_url);
+    },
+
+    // To make it reactive in Svelte 5 templates easily:
+    subscribe: _url.subscribe,
+
     goto(newPath) {
-      let p = newPath;
-      if (p !== '/' && p.endsWith('/')) p = p.slice(0, -1);
-      _url = p;
-      
+      const p = normalize(newPath);
+      _url.set(p);
       if (isBrowser && window.location.pathname !== p) {
         window.history.pushState({}, '', p);
       }

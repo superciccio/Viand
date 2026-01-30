@@ -47,8 +47,6 @@ function preflight() {
             const lang = fs.existsSync(langPath) ? fs.readFileSync(langPath, 'utf-8') : "";
 
             try {
-                // ATOMIC PREFLIGHT: No more logic file generation!
-                // Everything happens in-memory via the Vite plugin.
                 const { reports } = processViand(code, sql, api, lang, filePath);
                 if (reports?.length) reports.forEach(r => console.warn(`⚠️ [${file}] ${r}`));
             } catch (e) {
@@ -76,7 +74,7 @@ if (command === 'dev') {
             const entryPath = path.join(distEntries, name === 'Home' ? 'index.html' : `${name.toLowerCase()}/index.html`);
             if (!fs.existsSync(path.dirname(entryPath))) fs.mkdirSync(path.dirname(entryPath), { recursive: true });
             
-            const html = `<!DOCTYPE html><html><body><div id="app"></div><script type="module">import { mount } from "svelte"; import App from "../src/${file}"; mount(App, { target: document.getElementById("app") });</script></body></html>`;
+            const html = `<!DOCTYPE html><html><body><div id=\"app\"></div><script type=\"module\">import { mount } from \"svelte\"; import App from \"../src/${file}\"; mount(App, { target: document.getElementById(\"app\") });</script></body></html>`;
             fs.writeFileSync(entryPath, html);
             inputs.push(name === 'Home' ? 'index.html' : `${name.toLowerCase()}/index.html`);
         }

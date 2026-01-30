@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Viand Signals Lab</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      import { mount } from "./src/runtime.ts";
+      import { App } from "./src/App.ts";
+      mount(document.getElementById("app"), App);
+    </script>
+  </body>
+</html>

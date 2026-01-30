@@ -1,33 +1,40 @@
 /**
  * 🌍 Viand Standard Intl Interface
- * Reactive internationalization and formatting.
+ * Reactive internationalization using Svelte Stores.
  */
 
+import { writable, get } from "svelte/store";
+
 function createIntl() {
-  let locale = $state('en');
-  let _dict = $state({});
+  const _locale = writable('en');
+  const _dict = writable({});
 
   return {
-    get locale() { return locale; },
-    set locale(v) { locale = v; },
+    // Svelte Store Compatibility
+    subscribe: _locale.subscribe,
+
+    get locale() { return get(_locale); },
+    set locale(v) { _locale.set(v); },
 
     load(data) {
-      _dict = { ..._dict, ...data };
+      _dict.update(d => ({ ...d, ...data }));
     },
 
     t(key) {
-      const entry = _dict[key];
+      const locale = get(_locale);
+      const dict = get(_dict);
+      const entry = dict[key];
       if (!entry) return key;
       return entry[locale] || entry['en'] || key;
     },
 
     date(val, options = {}) {
       const d = typeof val === 'string' ? new Date(val) : val;
-      return new Intl.DateTimeFormat(locale, options).format(d);
+      return new Intl.DateTimeFormat(get(_locale), options).format(d);
     },
 
     currency(val, currency = 'USD') {
-      return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(val);
+      return new Intl.NumberFormat(get(_locale), { style: 'currency', currency }).format(val);
     }
   };
 }
