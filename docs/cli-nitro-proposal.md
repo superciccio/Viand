@@ -6,6 +6,7 @@ To compete with **SvelteKit** and **Nuxt**, Viand's CLI needs to evolve from a "
 Nitro is the engine that powers Nuxt. It provides a standardized way to build servers that run anywhere (Node.js, Vercel, Netlify, Cloudflare Workers, Bun).
 
 - **Zero-Config Deployment:** Write once, deploy to Edge or Serverless without changing code.
+- **No Manual Adapters:** We leverage Nitro's community-vetted presets. Viand doesn't need to write or test code for Vercel/Netlify/Cloudflare—we just target the Nitro standard.
 - **Unified Sibling Execution:** Nitro can be the host for our `.sql` and `.api` sibling logic on the server.
 - **Server-Side Routing:** Standardized handling of dynamic routes and middleware.
 - **Fast HMR:** Combined with Vite, it provides a seamless developer experience.
