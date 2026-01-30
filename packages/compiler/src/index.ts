@@ -4,6 +4,7 @@ import { generateSvelte5 } from './renderers/svelte.ts';
 import { generateLogicClass } from './renderers/logic.ts';
 import { generateTests } from './renderers/test.ts';
 import { generateStaticHTML } from './renderers/static.ts';
+import { format } from './formatter.ts';
 
 /**
  * Compiles Viand code to Svelte code.
@@ -45,5 +46,6 @@ export {
     generateSvelte5, 
     generateLogicClass, 
     generateTests,
-    generateStaticHTML
+    generateStaticHTML,
+    format
 };

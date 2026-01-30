@@ -10,18 +10,15 @@ import {
 } from 'vscode-languageserver/node';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { tokenize, analyzeHierarchy, buildManifest } from '../../compiler/src/index.ts';
+import { tokenize, analyzeHierarchy, buildManifest, format } from '../../compiler/src/index.ts';
 
-// Create a connection for the server, using Node's IPC as a transport.
-const connection = createConnection(ProposedFeatures.all);
-
-// Create a simple text document manager.
-const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
+// ... (connection setup)
 
 connection.onInitialize((params: InitializeParams) => {
 	const result: InitializeResult = {
 		capabilities: {
 			textDocumentSync: TextDocumentSyncKind.Incremental,
+			documentFormattingProvider: true,
 			hoverProvider: true,
 			completionProvider: {
 				resolveProvider: true
@@ -29,6 +26,24 @@ connection.onInitialize((params: InitializeParams) => {
 		}
 	};
 	return result;
+});
+
+connection.onDocumentFormatting(params => {
+	const doc = documents.get(params.textDocument.uri);
+	if (!doc) return null;
+
+	const text = doc.getText();
+	const formatted = format(text);
+
+	return [
+		{
+			range: {
+				start: { line: 0, character: 0 },
+				end: { line: doc.lineCount, character: 0 }
+			},
+			newText: formatted
+		}
+	];
 });
 
 connection.onHover(params => {
