@@ -7,8 +7,12 @@ type Child = HTMLElement | string | ReadonlySignal<any> | Child[];
 
 export function h(tag: string | Function, props: Props = {}, children: Child[] = [], ref: any = null, widget: any = null): HTMLElement {
   if (typeof tag === 'function') {
-      return tag(props);
+      const res = tag(props);
+      if (widget && res instanceof HTMLElement) (res as any).__viand = widget;
+      if (typeof ref === 'function') ref(res);
+      return res;
   }
+  
   const el = document.createElement(tag);
   if (widget) (el as any).__viand = widget;
   if (typeof ref === 'function') {
@@ -26,19 +30,22 @@ export function h(tag: string | Function, props: Props = {}, children: Child[] =
         const prop = key.split(':')[1];
         const sig = value as any; 
         
-        if (prop in el) {
-            (el as any)[prop] = sig.value;
-        }
+        // Initial sync
+        if (prop in el) (el as any)[prop] = sig.value;
 
         effect(() => {
-             if ((el as any)[prop] !== sig.value) {
-                 (el as any)[prop] = sig.value;
+             const val = sig.value;
+             // Stability Guard: Only update if different AND not currently being edited
+             if (document.activeElement !== el && (el as any)[prop] !== val) {
+                 (el as any)[prop] = val;
              }
         });
 
         const eventName = (prop === 'value' || prop === 'checked') ? 'input' : 'change';
         el.addEventListener(eventName, () => {
-             sig.value = (el as any)[prop];
+             if (sig.peek() !== (el as any)[prop]) {
+                 sig.value = (el as any)[prop];
+             }
         });
     }
     // Conditional Classes (class:active)
@@ -56,6 +63,7 @@ export function h(tag: string | Function, props: Props = {}, children: Child[] =
     }
     // Reactive Attributes
     else if (value && typeof value === 'object' && 'value' in value) {
+      if (key.startsWith('on') || key.startsWith('bind:') || key.startsWith('class:')) continue;
       effect(() => {
         if (key === 'class') {
             el.className = '';
@@ -67,6 +75,7 @@ export function h(tag: string | Function, props: Props = {}, children: Child[] =
     } 
     // Static Attributes
     else {
+      if (key.startsWith('on') || key.startsWith('bind:') || key.startsWith('class:')) continue;
       if (key === 'class') {
           el.classList.add(...String(value).split(/\s+/).filter(c => c));
       }
@@ -112,8 +121,8 @@ export function renderList(listSignal: any, itemTemplate: (item: any) => HTMLEle
         newElements.push(el);
     });
 
-    container.innerHTML = '';
-    newElements.forEach(el => container.appendChild(el));
+    // Stable Reconciler: replaceChildren is more efficient than innerHTML=''
+    container.replaceChildren(...newElements);
   });
   return container;
 }
@@ -122,15 +131,21 @@ export function renderMatch(exprSignal: any, cases: { condition: any, template: 
   const container = document.createElement('div');
   container.style.display = 'contents';
   if (widget) (container as any).__viand = widget;
+  
+  let currentCondition: any = undefined;
+  let currentElement: HTMLElement | null = null;
+
   effect(() => {
-    container.innerHTML = '';
     const val = exprSignal.value;
+    // Stability Guard for components
+    if (val === currentCondition && currentElement) return;
+    currentCondition = val;
+
     const match = cases.find(c => c.condition === val);
-    if (match) {
-      container.appendChild(match.template());
-    } else {
-      container.appendChild(defaultTemplate());
-    }
+    const newElement = match ? match.template() : defaultTemplate();
+    
+    container.replaceChildren(newElement);
+    currentElement = newElement;
   });
   return container;
 }

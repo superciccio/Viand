@@ -137,6 +137,8 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
         while (stack.length > 1 && token.depth <= stack[stack.length - 1].depth) stack.pop();
         const context = stack[stack.length - 1];
 
+        const inView = stack.some(s => ['view-root', 'view-node', 'match-root'].includes(s.type));
+
         if (context.body) {
             if (token.type === 'CONTROL_FLOW' && /^if\b/.test(trimmed)) {
                 const b: ManifestFunction = { type: 'js-block', body: [trimmed], depth: token.depth, line: token.line };
@@ -184,7 +186,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
         }
 
         // 2. Logic Definitions
-        if (token.type === 'PROP_DECLARATION') {
+        if (token.type === 'PROP_DECLARATION' && !inView) {
             const m = trimmed.match(/@prop\s+"?\$?([a-z_]\w*)/i);
             if (m) {
                 const id = m[1];
@@ -195,7 +197,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             }
             continue;
         }
-        if (token.type === 'STATE_VARIABLE') {
+        if (token.type === 'STATE_VARIABLE' && !inView) {
             const m = trimmed.match(/^\$([a-z_]\w*)/i);
             if (m) {
                 const id = m[1];
@@ -422,7 +424,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             continue;
         }
 
-        if (token.type === 'EXPRESSION' && token.depth > 0 && context.children) {
+        if ((token.type === 'EXPRESSION' || token.type === 'STATE_VARIABLE') && token.depth > 0 && context.children) {
             context.children.push({ type: 'text', content: trimmed, children: [], line: token.line });
         }
     }

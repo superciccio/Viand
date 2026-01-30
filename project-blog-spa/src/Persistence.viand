@@ -1,0 +1,36 @@
+component Persistence:
+    $notes: array = []
+    $newNote: string = ""
+
+    # Load data on mount
+    on mount:
+        sql.loadAll().then(res => $notes = res)
+
+    fn addNote():
+        if ($newNote.trim()) {
+            sql.save($newNote)
+            $notes = [...$notes, { text: $newNote }]
+            $newNote = ""
+        }
+
+    view:
+        div .p-10:
+            h1 .text-3xl .font-bold: "Real Persistence Test"
+            p .text-slate-500 .mt-2: "This data is stored in IndexedDB and survives page refreshes."
+
+            div .mt-10 .flex .gap-4:
+                input(bind:value: $newNote, placeholder: "Type a secret note...", class: "flex-1 p-3 border rounded-xl")
+                button -> click(addNote()): "Save to DB"
+
+            div .mt-8 .space-y-4:
+                each $note in $notes:
+                    div .p-4 .bg-slate-50 .rounded-lg .border:
+                        $note.text
+
+    style:
+        button:
+            background: #10b981
+            color: white
+            padding: 12px 24px
+            border-radius: 12px
+            font-weight: bold

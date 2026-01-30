@@ -108,7 +108,9 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
                 let code = line.replace(/\braw\s+/g, '');
                 // Handle '_.ref' mapping to local 'ref.value'
                 code = code.replace(/_\.([a-zA-Z0-9_]+)/g, '$1.value');
-                output.push(code.replace(/\$([a-zA-Z0-9_]+)/g, '$1.value').trim());
+                code = code.replace(/\$([a-zA-Z0-9_]+)/g, '$1.value').trim();
+
+                output.push(code);
             } else if (line.type === 'js-block') {
                 const header = line.body[0];
                 let cleanHeader = header.replace(/:$/, '');

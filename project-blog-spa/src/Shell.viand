@@ -6,6 +6,7 @@ component Shell:
             a(href: '/', class:active: router.path == '/', class: 'hover:text-blue-600 transition-colors'): "Home"
             a(href: '/about', class:active: router.path == '/about', class: 'hover:text-blue-600 transition-colors'): "About"
             a(href: '/dashboard', class:active: router.path == '/dashboard', class: 'hover:text-blue-600 transition-colors'): "Dashboard"
+            a(href: '/persistence', class:active: router.path == '/persistence', class: 'hover:text-blue-600 transition-colors'): "Persistence"
             a(href: '/404', class:active: router.path == '/404', class: 'hover:text-blue-600 transition-colors'): "Test 404"
         
         main .max-w-4xl .mx-auto .py-12 .px-6:
