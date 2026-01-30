@@ -58,6 +58,7 @@ function preflight() {
         if (file.endsWith('.viand')) {
             const filePath = path.join(srcDir, file);
             const sqlPath = filePath.replace('.viand', '.sql');
+            const apiPath = filePath.replace('.viand', '.api');
             
             const code = fs.readFileSync(filePath, 'utf-8');
             let sql = "";
@@ -66,8 +67,14 @@ function preflight() {
                 console.log(`🔍 Found SQL sibling: ${file.replace('.viand', '.sql')}`);
             }
 
+            let apiSource = "";
+            if (fs.existsSync(apiPath)) {
+                apiSource = fs.readFileSync(apiPath, 'utf-8');
+                console.log(`🔍 Found API sibling: ${file.replace('.viand', '.api')}`);
+            }
+
             try {
-                const { tests, logic } = processViand(code, sql);
+                const { tests, logic } = processViand(code, sql, apiSource);
                 // Always write logic file (Memory or Component)
                 if (logic) {
                     fs.writeFileSync(filePath.replace('.viand', '.viand.logic.svelte.ts'), logic);

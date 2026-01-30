@@ -7,16 +7,8 @@ export function generateLogicClass(manifest: ComponentManifest): string {
         if (path === 'viand:router') {
             script += `import { router } from "./viand-router.svelte.ts";\n`;
         } else if (path.endsWith('.viand')) {
-            // For now, logic classes only need to import siblings if they are MEMORY blocks.
-            // Since we don't know for sure, we'll try to import them but ONLY as a side effect
-            // OR skip them if they aren't used in logic.
-            // EXECUTIVE DECISION: We only import them if they aren't UI components.
-            // But we don't have that metadata here. 
-            // So we skip them. If a user needs shared state, they should use 'memory'
-            // and we will handle that specifically later.
             return; 
         } else {
-            // Standard NPM library (e.g. { Chart })
             script += `import { ${i.name} } from "${path}";\n`;
         }
     });
@@ -40,8 +32,9 @@ export function generateLogicClass(manifest: ComponentManifest): string {
                 const trimmedLine = line.trim();
                 if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('//')) return "";
                 let cleaned = line.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
-                cleaned = cleaned.replace(/\b_\./g, 'this.'); // Fix: _. -> this.
+                cleaned = cleaned.replace(/\b_\./g, 'this.'); 
                 cleaned = cleaned.replace(/\bsql\./g, 'this.sql.');
+                cleaned = cleaned.replace(/\bapi\./g, 'this.api.');
                 return `${indent}${cleaned};\n`;
             } else if (line.type === 'js-block') {
                 const rawH = line.body[0].toString().trim();
@@ -59,33 +52,46 @@ export function generateLogicClass(manifest: ComponentManifest): string {
         code += `\n  sql = {\n`;
         manifest.queries.forEach(q => {
             code += `    ${q.label}: (...args: any[]) => {\n`;
-            code += `      console.log("SQL EXEC [${q.label}]: ${q.query.replace(/\n/g, ' ')}", args);
-`;
+            code += `      console.log("SQL EXEC [${q.label}]: ${q.query.replace(/\n/g, ' ')}", args);\n`;
             code += `      return [];\n`;
             code += `    },\n`;
         });
         code += `  }\n`;
     }
 
+    if (manifest.api.length > 0) {
+        code += `\n  api = {\n`;
+        code += `    baseUrl: '', \n`;
+        manifest.api.forEach(endpoint => {
+            code += `    ${endpoint.label}: async (vars: any = {}) => {\n`;
+            code += `      const url = new URL(this.api.baseUrl + "${endpoint.path}", window.location.origin);
+`;
+            Object.entries(endpoint.query || {}).forEach(([k, v]) => {
+                code += `      url.searchParams.set("${k}", String(vars.${k} || ${v}));\n`;
+            });
+            code += `      const res = await fetch(url, {\n`;
+            code += `        method: "${endpoint.method}",\n`;
+            code += `        headers: ${JSON.stringify(endpoint.headers || {})}\n`;
+            code += `      });\n`;
+            code += `      return res.json();\n`;
+            code += `    },\n`;
+        });
+        code += `  }\n`;
+    }
+
     if (manifest.onMount.length > 0) {
-        code += `\n  onMount() {\n`;
+        code += `\n  async onMount() {\n`;
         const mountBody = manifest.onMount.map(line => {
             let cleaned = line.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
-            return cleaned.replace(/\b_\./g, 'this.'); // Fix: _. -> this.
+            cleaned = cleaned.replace(/\b_\./g, 'this.');
+            cleaned = cleaned.replace(/\bapi\./g, 'this.api.');
+            return cleaned;
         }).join('\n    ');
         code += `    ${mountBody}\n`;
         code += `  }\n`;
     }
     
     code += `}\n`;
-    
-    // Every logic file exports its class
-    code += `\nexport const ${manifest.name} = ${manifest.name}Logic; // Alias for class access\n`;
-    
-    if (manifest.isMemory) {
-        code += `\n// Memory Pillar: Export a singleton instance\n`;
-        code += `export const ${manifest.name} = new ${manifest.name}Logic();\n`;
-    }
-
+    if (manifest.isMemory) code += `\nexport const ${manifest.name} = new ${manifest.name}Logic();\n`;
     return code;
 }

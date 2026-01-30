@@ -2,6 +2,9 @@ use { Chart } from "chart.js/auto"
 
 component Dashboard:
     on mount:
+        const data = await api.getAnalytics()
+        console.log("Fetched analytics data:", data)
+        
         new Chart(_.chartEl, {
             type: 'bar',
             data: {

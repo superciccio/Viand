@@ -8,10 +8,10 @@ import { generateStaticHTML } from './renderers/static.ts';
 /**
  * Compiles Viand code to Svelte code.
  */
-export function compile(code: string, sql: string = ""): string {
+export function compile(code: string, sql: string = "", api: string = ""): string {
     const { tokens, lexerErrors } = tokenize(code);
     const tree = analyzeHierarchy(tokens);
-    const { manifest } = buildManifest(tree, lexerErrors, sql);
+    const { manifest } = buildManifest(tree, lexerErrors, sql, api);
     
     if (manifest.isMemory) {
         return generateLogicClass(manifest) + `\nexport default ${manifest.name};\n`;
@@ -23,10 +23,10 @@ export function compile(code: string, sql: string = ""): string {
 /**
  * Full compilation process.
  */
-export function processViand(code: string, sql: string = "") {
+export function processViand(code: string, sql: string = "", api: string = "") {
     const { tokens, lexerErrors } = tokenize(code);
     const tree = analyzeHierarchy(tokens);
-    const { manifest, reports } = buildManifest(tree, lexerErrors, sql);
+    const { manifest, reports } = buildManifest(tree, lexerErrors, sql, api);
     
     return {
         manifest,

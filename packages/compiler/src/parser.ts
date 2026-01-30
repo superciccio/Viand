@@ -62,29 +62,122 @@ export function findSplitColon(text: string): number {
     return -1;
 }
 
-export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: string = ""):
- { manifest: ComponentManifest, reports: string[] } {
+export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: string = "", apiSource: string = ""): { manifest: ComponentManifest, reports: string[] } {
+
     const manifest: ComponentManifest = {
+
         name: "Component",
+
         isMemory: false,
-        imports: [], props: [], state: [], reactive: [], functions: [], onMount: [], refs: [], styles: [], view: [], tests: [], queries: [], slots: []
+
+        imports: [], props: [], state: [], reactive: [], functions: [], onMount: [], refs: [], styles: [], view: [], tests: [], queries: [], api: [], slots: []
+
     };
 
+
+
     if (sqlSource) {
-        const lines = sqlSource.split('\n');
-        let currentLabel = "";
-        let currentQuery = "";
+
+        // ... (existing sql parsing)
+
+    }
+
+
+
+    if (apiSource) {
+
+        const lines = apiSource.split('\n');
+
+        let currentApi: any = null;
+
+        
+
         lines.forEach(line => {
+
+            const trimmed = line.trim();
+
+            if (!trimmed) return;
+
+
+
             const labelMatch = line.match(/--\s*label:\s*(\w+)/i);
+
             if (labelMatch) {
-                if (currentLabel && currentQuery) manifest.queries.push({ label: currentLabel, query: currentQuery.trim() });
-                currentLabel = labelMatch[1];
-                currentQuery = "";
-            } else if (currentLabel) {
-                currentQuery += line + "\n";
+
+                if (currentApi) manifest.api.push(currentApi);
+
+                currentApi = { label: labelMatch[1], method: 'GET', path: '/', headers: {}, query: {} };
+
+                return;
+
             }
+
+
+
+            if (!currentApi) return;
+
+
+
+            // Detect HTTP Method and Path
+
+            const httpMatch = trimmed.match(/^(GET|POST|PUT|DELETE|PATCH)\s+(.+)/i);
+
+            if (httpMatch) {
+
+                currentApi.method = httpMatch[1].toUpperCase();
+
+                currentApi.path = httpMatch[2].trim();
+
+                return;
+
+            }
+
+
+
+            // Detect Indented Blocks (Headers, Query, Body)
+
+            const indentMatch = line.match(/^(\s+)/);
+
+            if (indentMatch && indentMatch[0].length > 0) {
+
+                const parts = trimmed.split(':');
+
+                if (parts.length >= 2) {
+
+                    const key = parts[0].trim();
+
+                    const val = parts.slice(1).join(':').trim();
+
+                    
+
+                    // Simple logic to place in headers or query
+
+                    if (trimmed.startsWith('header') || currentApi.lastBlock === 'headers') {
+
+                        if (trimmed.startsWith('header')) { currentApi.lastBlock = 'headers'; return; }
+
+                        currentApi.headers[key] = val;
+
+                    } else if (trimmed.startsWith('query') || currentApi.lastBlock === 'query') {
+
+                        if (trimmed.startsWith('query')) { currentApi.lastBlock = 'query'; return; }
+
+                        currentApi.query[key] = val;
+
+                    }
+
+                }
+
+            } else {
+
+                currentApi.lastBlock = null;
+
+            }
+
         });
-        if (currentLabel && currentQuery) manifest.queries.push({ label: currentLabel, query: currentQuery.trim() });
+
+        if (currentApi) manifest.api.push(currentApi);
+
     }
     
     const stack: any[] = [{ type: 'root', children: manifest.view, depth: -1 }]; 

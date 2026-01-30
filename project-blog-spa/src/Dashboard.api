@@ -1,0 +1,6 @@
+-- label: getAnalytics
+GET /api/v1/dashboard/analytics
+headers:
+    Content-Type: application/json
+query:
+    period: "monthly"

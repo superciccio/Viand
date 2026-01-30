@@ -67,11 +67,16 @@ This document tracks the strategic development milestones for the Viand language
 ## 🚩 Milestone 13: Partial Hydration (The Island Pillar)
 ...
 
-## 🚩 Milestone 14: JS Interoperability (The Bridge Pillar)
-**Goal:** Easy usage of existing NPM libraries (Charts, Maps, etc.).
-- [ ] **`#ref` Shorthand:** Automatic DOM element binding (e.g., `div #myRef:`).
-- [ ] **`on mount:` block:** Dedicated lifecycle logic for library initialization.
-- [ ] **NPM Import Support:** Support for named and default imports from `node_modules`.
+## 🚩 Milestone 14: JS Interoperability (The Bridge Pillar) [COMPLETED]
+- [x] **`#ref` Shorthand:** Automatic DOM element binding (e.g., `div #myRef:`).
+- [x] **`on mount:` block:** Dedicated lifecycle logic for library initialization.
+- [x] **NPM Import Support:** Support for named and default imports from `node_modules`.
 
-## 🚩 Milestone 15: Markdown Integration (The Content Pillar)
+## 🚩 Milestone 15: The API Pillar (HTTP Siblings)
+**Goal:** Clean, declarative HTTP communication with full testability.
+- [ ] **`.api` Sibling Scanning:** Detect and parse component-matched HTTP definitions.
+- [ ] **Declarative HTTP Logic:** Define headers, query, and body using Viand indentation.
+- [ ] **Dual-Mode Bridge:** Support for real fetch (with base URL overrides) and mocking in tests.
+
+## 🚩 Milestone 16: Markdown Integration (The Content Pillar)
 ...

@@ -71,6 +71,9 @@ export function generateSvelte5(manifest: ComponentManifest): string {
             
             // Fix: If the content IS a known local variable or imported name (e.g. item.text, State.theme), wrap it
             const possibleVar = content.split('.')[0];
+            if (['sql', 'api'].includes(possibleVar)) {
+                return `${indent}{_.${content}}\n`;
+            }
             if (localVars.includes(possibleVar) || importedNames.includes(possibleVar)) {
                 return `${indent}{${content}}\n`;
             }

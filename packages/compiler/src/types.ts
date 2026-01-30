@@ -93,5 +93,13 @@ export interface ComponentManifest {
     view: ViewNode[];
     tests: TestNode[];
     queries: { label: string, query: string }[];
+    api: { 
+        label: string, 
+        method: string, 
+        path: string, 
+        headers?: Record<string, string>,
+        query?: Record<string, string>,
+        body?: string
+    }[];
     slots: string[];
 }
