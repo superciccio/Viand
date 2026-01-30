@@ -83,6 +83,7 @@ Viand is built to surgically remove the friction found in modern frameworks (Nex
 - [ ] **Nitro Integration:** Replace `bake --ssr` with Nitro for production scale.
 - [ ] **UI Pantry:** Official headless UI primitives (via Ark UI).
 - [ ] **AI Sibling:** Integrated prompt engineering for LLMs.
+- [ ] **Gradual Typing:** Implementation of `strict: true` for mandatory type safety.
 - [ ] **Validation Pass:** Catch undefined variables/functions during compilation.
 - [ ] **Pantry Growth:** Standard modules for `use auth`, `use storage`, and `use meta`.
 

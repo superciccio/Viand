@@ -28,6 +28,7 @@ This roadmap tracks the development of the **Viand Standalone Engine**, moving a
 - [ ] **Ghost Mode:** 100% In-memory transformation in Vite.
 - [ ] **Source Maps:** 1:1 error mapping to `.viand` source.
 - [ ] **LSP Support:** Intelligent IDE features for the new foundation.
+- [ ] **Strict Mode:** Implementation of `strict: true` for mandatory Prop/State typing.
 
 ## 🔱 Phase 6: The Summit (Optimization)
 - [ ] **High-Efficiency Reconciliation:** Replace the naive `renderList` with a production-grade diffing algorithm (Longest Increasing Subsequence).
