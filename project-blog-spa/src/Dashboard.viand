@@ -1,30 +1,34 @@
 use { Chart } from "chart.js/auto"
 
 component Dashboard:
-    on mount:
-        const data = await api.getAnalytics()
-        console.log("Fetched analytics data:", data)
-        
-        new Chart(_.chartEl, {
-            type: 'bar',
-            data: {
-                labels: ['January', 'February', 'March', 'April'],
-                datasets: [{
-                    label: 'Viand Bakes',
-                    backgroundColor: '#3b82f6',
-                    data: [65, 59, 80, 81]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        })
+    sync $analytics = api.getAnalytics()
+
+    on change $analytics:
+        if $analytics && _.chartEl:
+            # Svelte 5 Fix: Use 'raw' to pass non-proxied data to Chart.js
+            const data = raw $analytics
+            
+            new Chart(_.chartEl, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Viand Bakes',
+                        backgroundColor: '#3b82f6',
+                        data: data.data,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                },
+            })
 
     view:
         h1 .text-3xl .font-bold .text-slate-800: "Analytics Dashboard"
-        p .text-slate-500 .mt-2: "Real-time Chart.js integration via Viand Bridge."
+        p .text-slate-500 .mt-2: "Declarative Chart.js integration via sync, on change & raw."
         
-        div .mt-10 .p-8 .bg-white .rounded-2xl .shadow-xl .border .border-slate-100:
-            div .h-80:
-                canvas #chartEl:
+                    div .mt-10 .p-8 .bg-white .rounded-2xl .shadow-xl .border .border-slate-100:
+                        div .h-80:
+                            canvas #chartEl
+        

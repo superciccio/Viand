@@ -4,3 +4,5 @@ headers:
     Content-Type: application/json
 query:
     period: "monthly"
+mock:
+    { "success": true, "labels": ["Jan", "Feb", "Mar", "Apr"], "data": [45, 82, 120, 95] }

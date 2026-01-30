@@ -16,6 +16,8 @@ export function identifyToken(content: string): TokenType {
     if (trimmed.startsWith('use ')) return 'IMPORT_DECLARATION';
     if (trimmed.startsWith('fn ')) return 'FUNCTION_ACTION';
     if (trimmed.startsWith('on mount:')) return 'LIFECYCLE_BLOCK';
+    if (trimmed.startsWith('on change ')) return 'WATCH_BLOCK';
+    if (trimmed.startsWith('style:')) return 'STYLE_ROOT';
     
     if (trimmed.startsWith('each ') || 
         trimmed.startsWith('if ') || 
@@ -26,7 +28,11 @@ export function identifyToken(content: string): TokenType {
         return 'CONTROL_FLOW';
     }
     
-    if (trimmed.includes(':') || trimmed.includes('(')) {
+    const HTML_TAGS = ['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'button', 'input', 'canvas', 'img', 'a', 'nav', 'footer', 'main', 'section', 'article', 'header'];
+    const firstWord = trimmed.split(/[ .(#]/)[0];
+    const isPascal = /^[A-Z]/.test(firstWord);
+    
+    if (trimmed.includes(':') || trimmed.includes('(') || trimmed.includes('#') || HTML_TAGS.includes(firstWord) || isPascal) {
         return 'UI_ELEMENT';
     }
     

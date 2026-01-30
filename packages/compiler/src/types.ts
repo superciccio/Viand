@@ -7,87 +7,12 @@ export type TokenType =
     | 'REACTIVE_DECLARATION'
     | 'FUNCTION_ACTION'
     | 'LIFECYCLE_BLOCK'
+    | 'WATCH_BLOCK'
     | 'STYLE_ROOT'
-    | 'VIEW_ROOT'
-    | 'TEST_ROOT'
-    | 'TEST_PERSONA'
-    | 'CONTROL_FLOW'
-    | 'UI_ELEMENT'
-    | 'EXPRESSION'
-    | 'MUST_ASSERTION';
-
-export interface Token {
-    line: number;
-    indent: number;
-    type: TokenType;
-    content: string;
-    raw: string;
-    depth: number;
-}
-
-export interface ManifestProp {
-    id: string;
-    type: string;
-    value: string;
-    line: number;
-}
-
-export interface ManifestFunction {
-    type: 'function' | 'js-block';
-    name?: string;
-    params?: string[];
-    body: (string | ManifestFunction)[];
-    depth: number;
-    line: number;
-}
-
-export interface ManifestStyle {
-    selector: string;
-    rules: string[];
-    line: number;
-}
-
-export type ViewNodeType = 'element' | 'text' | 'if' | 'each' | 'match' | 'slot';
-
-export interface ViewNode {
-    type: ViewNodeType;
-    tag?: string;
-    attrs?: Record<string, string>;
-    ref?: string;
-    children: ViewNode[];
-    content?: string;
-    condition?: string;
-    alternate?: ViewNode;
-    list?: string;
-    item?: string;
-    expression?: string;
-    cases?: { condition: string, children: ViewNode[] }[];
-    defaultCase?: { children: ViewNode[] };
-    line: number;
-}
-
-export interface TestNode {
-    type: 'logic' | 'ui' | 'integration';
-    body: (string | MustAssertion)[];
-    line: number;
-    depth: number;
-}
-
-export interface MustAssertion {
-    type: 'must';
-    expression: string;
-    line: number;
-}
-
-export interface ComponentManifest {
-    name: string;
-    isMemory: boolean;
-    imports: { name: string, path: string }[];
-    props: ManifestProp[];
-    state: ManifestProp[];
-    reactive: { id: string, expression: string }[];
+...
     functions: ManifestFunction[];
-    onMount: string[];
+    onMount: (string | ManifestFunction)[];
+    watch: { dependency: string, body: (string | ManifestFunction)[] }[];
     refs: string[];
     styles: ManifestStyle[];
     view: ViewNode[];
@@ -99,7 +24,8 @@ export interface ComponentManifest {
         path: string, 
         headers?: Record<string, string>,
         query?: Record<string, string>,
-        body?: string
+        body?: string,
+        mock?: string
     }[];
     slots: string[];
 }

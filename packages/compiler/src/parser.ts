@@ -63,121 +63,70 @@ export function findSplitColon(text: string): number {
 }
 
 export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: string = "", apiSource: string = ""): { manifest: ComponentManifest, reports: string[] } {
-
     const manifest: ComponentManifest = {
-
         name: "Component",
-
         isMemory: false,
-
-        imports: [], props: [], state: [], reactive: [], functions: [], onMount: [], refs: [], styles: [], view: [], tests: [], queries: [], api: [], slots: []
-
+        imports: [], props: [], state: [], reactive: [], functions: [], onMount: [], watch: [], refs: [], styles: [], view: [], tests: [], queries: [], api: [], slots: []
     };
 
-
-
     if (sqlSource) {
-
-        // ... (existing sql parsing)
-
+        const lines = sqlSource.split('\n');
+        let currentLabel = "";
+        let currentQuery = "";
+        lines.forEach(line => {
+            const labelMatch = line.match(/--\s*label:\s*(\w+)/i);
+            if (labelMatch) {
+                if (currentLabel && currentQuery) manifest.queries.push({ label: currentLabel, query: currentQuery.trim() });
+                currentLabel = labelMatch[1];
+                currentQuery = "";
+            } else if (currentLabel) {
+                currentQuery += line + "\n";
+            }
+        });
+        if (currentLabel && currentQuery) manifest.queries.push({ label: currentLabel, query: currentQuery.trim() });
     }
 
-
-
     if (apiSource) {
-
         const lines = apiSource.split('\n');
-
         let currentApi: any = null;
-
-        
-
         lines.forEach(line => {
-
             const trimmed = line.trim();
-
             if (!trimmed) return;
-
-
-
             const labelMatch = line.match(/--\s*label:\s*(\w+)/i);
-
             if (labelMatch) {
-
                 if (currentApi) manifest.api.push(currentApi);
-
-                currentApi = { label: labelMatch[1], method: 'GET', path: '/', headers: {}, query: {} };
-
+                currentApi = { label: labelMatch[1], method: 'GET', path: '/', headers: {}, query: {}, mock: "" };
                 return;
-
             }
-
-
-
             if (!currentApi) return;
-
-
-
-            // Detect HTTP Method and Path
-
-            const httpMatch = trimmed.match(/^(GET|POST|PUT|DELETE|PATCH)\s+(.+)/i);
-
-            if (httpMatch) {
-
-                currentApi.method = httpMatch[1].toUpperCase();
-
-                currentApi.path = httpMatch[2].trim();
-
+            if (trimmed.startsWith('headers:') || trimmed.startsWith('query:') || trimmed.startsWith('mock:')) {
+                currentApi.lastBlock = trimmed.replace(':', '').trim();
+                if (currentApi.lastBlock === 'mock') currentApi.mock = "";
                 return;
-
             }
-
-
-
-            // Detect Indented Blocks (Headers, Query, Body)
-
             const indentMatch = line.match(/^(\s+)/);
-
             if (indentMatch && indentMatch[0].length > 0) {
-
-                const parts = trimmed.split(':');
-
-                if (parts.length >= 2) {
-
-                    const key = parts[0].trim();
-
-                    const val = parts.slice(1).join(':').trim();
-
-                    
-
-                    // Simple logic to place in headers or query
-
-                    if (trimmed.startsWith('header') || currentApi.lastBlock === 'headers') {
-
-                        if (trimmed.startsWith('header')) { currentApi.lastBlock = 'headers'; return; }
-
-                        currentApi.headers[key] = val;
-
-                    } else if (trimmed.startsWith('query') || currentApi.lastBlock === 'query') {
-
-                        if (trimmed.startsWith('query')) { currentApi.lastBlock = 'query'; return; }
-
-                        currentApi.query[key] = val;
-
-                    }
-
+                if (currentApi.lastBlock === 'mock') {
+                    currentApi.mock += trimmed + "\n";
+                    return;
                 }
-
+                const parts = trimmed.split(':');
+                if (parts.length >= 2) {
+                    const key = parts[0].trim();
+                    const val = parts.slice(1).join(':').trim();
+                    if (currentApi.lastBlock === 'headers') currentApi.headers[key] = val;
+                    else if (currentApi.lastBlock === 'query') currentApi.query[key] = val;
+                }
             } else {
-
-                currentApi.lastBlock = null;
-
+                const httpMatch = trimmed.match(/^(GET|POST|PUT|DELETE|PATCH)\s+(.+)/i);
+                if (httpMatch) {
+                    currentApi.method = httpMatch[1].toUpperCase();
+                    currentApi.path = httpMatch[2].trim();
+                    currentApi.lastBlock = null;
+                }
             }
-
         });
-
         if (currentApi) manifest.api.push(currentApi);
-
     }
     
     const stack: any[] = [{ type: 'root', children: manifest.view, depth: -1 }]; 
@@ -187,6 +136,24 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
         while (stack.length > 1 && token.depth <= stack[stack.length - 1].depth) stack.pop();
         const context = stack[stack.length - 1];
 
+        // 🧠 PRIORITY 1: LOGIC BODY CAPTURE
+        // If we are already in a logic context, EVERYTHING indented is logic.
+        if (context.body) {
+            if (token.type === 'CONTROL_FLOW' && /^if\b/.test(trimmed)) {
+                const b: ManifestFunction = { type: 'js-block', body: [trimmed], depth: token.depth, line: token.line };
+                context.body.push(b);
+                stack.push(b);
+                continue;
+            } else if (token.type === 'MUST_ASSERTION') {
+                context.body.push({ type: 'must', expression: trimmed.replace('must ', '').trim(), line: token.line });
+                continue;
+            } else { // Treats UI_ELEMENT or EXPRESSION identically as Logic
+                context.body.push(token.content);
+                continue;
+            }
+        }
+
+        // 1. Module Declarations
         if (token.type === 'COMPONENT_DECL') {
             const m = trimmed.match(/component\s+(\w+)/);
             if (m) manifest.name = m[1];
@@ -194,10 +161,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
         }
         if (token.type === 'MEMORY_DECL') {
             const m = trimmed.match(/memory\s+(\w+)/);
-            if (m) {
-                manifest.name = m[1];
-                manifest.isMemory = true;
-            }
+            if (m) { manifest.name = m[1]; manifest.isMemory = true; }
             continue;
         }
         if (token.type === 'IMPORT_DECLARATION') {
@@ -206,47 +170,42 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 continue;
             }
             const m = trimmed.match(/use\s+(.+?)\s+from\s+["'](.*?)["']/);
-            if (m) {
-                manifest.imports.push({ name: m[1].replace(/[{}]/g, '').trim(), path: m[2] });
-                continue;
-            }
+            if (m) { manifest.imports.push({ name: m[1].replace(/[{}]/g, '').trim(), path: m[2] }); continue; }
             const m2 = trimmed.match(/use\s+(\w+)/);
             if (m2) manifest.imports.push({ name: m2[1], path: `viand:${m2[1]}` });
             continue;
         }
+
+        // 2. Logic Definitions
         if (token.type === 'PROP_DECLARATION') {
             const m = trimmed.match(/@prop\s+"?([a-z_]\w*)/i);
             if (m) {
                 const id = m[1];
                 let type = 'any', value = 'undefined';
-                const tm = trimmed.match(/:\s*([a-z0-9_[\\\]]+)/i); if (tm) type = tm[1];
+                const tm = trimmed.match(/:\s*([a-z0-9_[\\]+)/i); if (tm) type = tm[1];
                 const vm = trimmed.match(/=\s*(.*)$/); if (vm) value = vm[1].trim();
                 manifest.props.push({ id, type, value, line: token.line });
             }
             continue;
         }
         if (token.type === 'STATE_VARIABLE') {
-            if (context.type === 'function' || context.type === 'js-block' || context.type === 'test-node' || context.type === 'lifecycle') {
-                const body = (context.type === 'test-node') ? context.node.body : 
-                             (context.type === 'lifecycle') ? manifest.onMount : context.body;
-                body.push(token.content);
-            } else {
-                const m = trimmed.match(/^\$([a-z_]\w*)/i);
-                if (m) {
-                    const id = m[1];
-                    let type = 'any', value = 'undefined';
-                    const tm = trimmed.match(/:\s*([a-z0-9_[\\\]]+)/i); if (tm) type = tm[1];
-                    const vm = trimmed.match(/=\s*(.*)$/); if (vm) value = vm[1].trim();
-                    manifest.state.push({ id, type, value, line: token.line });
-                }
+            const idMatch = trimmed.match(/^\$([a-z_]\w*)/i);
+            if (idMatch) {
+                const id = idMatch[1];
+                let type = 'any', value = 'undefined';
+                const tm = trimmed.match(/:\s*([a-z0-9_[\\]+)/i); if (tm) type = tm[1];
+                const vm = trimmed.match(/=\s*(.*)$/); if (vm) value = vm[1].trim();
+                manifest.state.push({ id, type, value, line: token.line });
+                continue;
             }
-            continue;
         }
         if (token.type === 'REACTIVE_DECLARATION') {
             const m = trimmed.match(/^sync\s+\$([a-z_]\w*)\s*=\s*(.*)/i);
             if (m) manifest.reactive.push({ id: m[1], expression: m[2] });
             continue;
         }
+
+        // 3. Logic Block Entries
         if (token.type === 'FUNCTION_ACTION') {
             const m = trimmed.match(/fn\s+(\w+)\s*\((.*?)\)/);
             if (m) {
@@ -257,11 +216,15 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             continue;
         }
         if (token.type === 'LIFECYCLE_BLOCK') {
-            stack.push({ type: 'lifecycle', depth: token.depth });
+            const block = { type: 'lifecycle', body: manifest.onMount, depth: token.depth };
+            stack.push(block);
             continue;
         }
-        if (token.type === 'STYLE_ROOT') {
-            stack.push({ type: 'style', depth: token.depth });
+        if (token.type === 'WATCH_BLOCK') {
+            const dependency = trimmed.replace('on change ', '').replace(':', '').trim();
+            const w = { dependency, body: [] };
+            manifest.watch.push(w);
+            stack.push({ type: 'watch', body: w.body, depth: token.depth });
             continue;
         }
         if (token.type === 'TEST_ROOT') {
@@ -272,24 +235,21 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             const persona = trimmed.slice(1).replace(':', '') as 'logic' | 'ui' | 'integration';
             const node: TestNode = { type: persona, body: [], line: token.line, depth: token.depth };
             manifest.tests.push(node);
-            stack.push({ type: 'test-node', node, depth: token.depth });
+            stack.push({ type: 'test-node', body: node.body, depth: token.depth });
             continue;
         }
 
-        if (context.type === 'test-node') {
-            if (token.type === 'MUST_ASSERTION') {
-                context.node.body.push({ type: 'must', expression: trimmed.replace('must ', '').trim(), line: token.line });
-            } else {
-                context.node.body.push(token.content);
-            }
+        // 4. View Context Start
+        if (token.type === 'VIEW_ROOT') {
+            stack.push({ type: 'view-root', children: manifest.view, depth: token.depth });
             continue;
         }
 
-        if (context.type === 'lifecycle') {
-            manifest.onMount.push(token.content);
+        // 🎨 VIEW HANDLING
+        if (token.type === 'STYLE_ROOT') {
+            stack.push({ type: 'style', depth: token.depth });
             continue;
         }
-
         if (context.type === 'style' || context.type === 'style-rule') {
             if (trimmed.endsWith(':')) {
                 const rule: ManifestStyle = { selector: trimmed.slice(0, -1), rules: [], line: token.line };
@@ -302,16 +262,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             continue;
         }
 
-        if (context.type === 'function' || context.type === 'js-block') {
-            if (token.type === 'CONTROL_FLOW' && trimmed.startsWith('if ')) {
-                const b: ManifestFunction = { type: 'js-block', body: [trimmed], depth: token.depth, line: token.line };
-                context.body.push(b);
-                stack.push(b);
-            } else { context.body.push(token.content); }
-            continue;
-        }
-
-        if (token.type === 'CONTROL_FLOW') {
+        if (token.type === 'CONTROL_FLOW' && (context.children || context.type === 'match-root')) {
             if (trimmed.startsWith('each ')) {
                 const m = trimmed.match(/each\s+\$([a-z_]\w*)\s+in\s+\$([a-z_]\w*)/i);
                 if (m) {
@@ -325,8 +276,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 stack.push({ type: 'match-root', node, depth: token.depth });
             } else if (trimmed.startsWith('case ') && context.type === 'match-root') {
                 const splitIdx = findSplitColon(trimmed);
-                let condition = "";
-                let inline = "";
+                let condition = "", inline = "";
                 if (splitIdx !== -1) {
                     condition = trimmed.slice(0, splitIdx).replace('case ', '').trim();
                     inline = trimmed.slice(splitIdx + 1).trim();
@@ -360,11 +310,10 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             continue;
         }
 
-        if (token.type === 'UI_ELEMENT') {
+        if (token.type === 'UI_ELEMENT' && context.children) {
             const idx = findSplitColon(trimmed);
-            const declaration = idx !== -1 ? trimmed.slice(0, idx).trim() : trimmed.trim();
-            const inline = idx !== -1 ? trimmed.slice(idx + 1).trim() : "";
-            
+            const declaration = (idx !== -1 && !trimmed.endsWith(')')) ? trimmed.slice(0, idx).trim() : trimmed.replace(/:$/, '').trim();
+            const inline = (idx !== -1 && !trimmed.endsWith(')')) ? trimmed.slice(idx + 1).trim() : "";
             if (declaration.startsWith('slot')) {
                 let slotName = "children";
                 const sm = declaration.match(/slot\s+(\w+)/);
@@ -374,18 +323,13 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 context.children.push(node);
                 continue;
             }
-
             let tagSide = declaration;
             let eventSide = "";
-            
-            // Simple robust arrow split
             if (declaration.includes('->')) {
                 const parts = declaration.split('->');
-                // The arrow is NOT allowed inside attributes, so the last part is the event
                 eventSide = parts.pop()!.trim();
                 tagSide = parts.join('->').trim();
             }
-
             const sp = tagSide.indexOf('(');
             const ep = tagSide.lastIndexOf(')');
             let tag = tagSide;
@@ -394,11 +338,11 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 tag = tagSide.slice(0, sp).trim();
                 const attrRaw = tagSide.slice(sp + 1, ep);
                 const pairs: string[] = [];
-                let start = 0, depth = 0;
+                let start = 0, d = 0;
                 for (let i = 0; i < attrRaw.length; i++) {
-                    if (attrRaw[i] === '{' || attrRaw[i] === '(' || attrRaw[i] === '[') depth++;
-                    if (attrRaw[i] === '}' || attrRaw[i] === ')' || attrRaw[i] === ']') depth--;
-                    if (attrRaw[i] === ',' && depth === 0) {
+                    if (attrRaw[i] === '{' || attrRaw[i] === '(' || attrRaw[i] === '[') d++;
+                    if (attrRaw[i] === '}' || attrRaw[i] === ')' || attrRaw[i] === ']') d--;
+                    if (attrRaw[i] === ',' && d === 0) {
                         pairs.push(attrRaw.slice(start, i));
                         start = i + 1;
                     }
@@ -420,7 +364,6 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                     }
                 });
             }
-
             const tagParts = tag.split('.');
             let actualTag = tagParts[0].trim();
             let refName = "";
@@ -451,7 +394,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             continue;
         }
 
-        if (token.type === 'EXPRESSION' && token.depth > 0 && trimmed !== 'view:') {
+        if (token.type === 'EXPRESSION' && token.depth > 0 && context.children) {
             context.children.push({ type: 'text', content: trimmed, children: [], line: token.line });
         }
     }
