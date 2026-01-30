@@ -1,7 +1,5 @@
 node_modules/
 dist/
 _viand_bake/
-*.viand.logic.svelte.ts
 *.test.ts
-viand-router.svelte.ts
 .DS_Store

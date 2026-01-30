@@ -24,9 +24,9 @@ function preflight() {
     console.log(`🏗️  Performing pre-flight scan in ${srcDir}...`);
     
     // Inject Stdlib
-    [['router.svelte.ts', 'viand-router.svelte.ts'], 
+    [['router.ts', 'viand-router.ts'], 
      ['notify.ts', 'viand-notify.ts'], 
-     ['intl.svelte.ts', 'viand-intl.svelte.ts']].forEach(([src, dest]) => {
+     ['intl.ts', 'viand-intl.ts']].forEach(([src, dest]) => {
         const srcPath = path.resolve(__dirname, '../../stdlib/src', src);
         const destPath = path.join(srcDir, dest);
         if (fs.existsSync(srcPath)) fs.copyFileSync(srcPath, destPath);
@@ -74,7 +74,7 @@ if (command === 'dev') {
             const entryPath = path.join(distEntries, name === 'Home' ? 'index.html' : `${name.toLowerCase()}/index.html`);
             if (!fs.existsSync(path.dirname(entryPath))) fs.mkdirSync(path.dirname(entryPath), { recursive: true });
             
-            const html = `<!DOCTYPE html><html><body><div id=\"app\"></div><script type=\"module\">import { mount } from \"svelte\"; import App from \"../src/${file}\"; mount(App, { target: document.getElementById(\"app\") });</script></body></html>`;
+            const html = `<!DOCTYPE html><html><body><div id=\"app\"></div><script type=\"module\">import { mount } from \"@viand/runtime\"; import { ${name} } from \"../src/${file}\"; mount(document.getElementById(\"app\"), () => ${name}());</script></body></html>`;
             fs.writeFileSync(entryPath, html);
             inputs.push(name === 'Home' ? 'index.html' : `${name.toLowerCase()}/index.html`);
         }
@@ -91,7 +91,7 @@ if (command === 'dev') {
 } else if (command === 'add' && args[2] === 'tailwind') {
     const install = spawn('npm', ['install', '-D', 'tailwindcss', '@tailwindcss/postcss', 'postcss', 'autoprefixer'], { cwd: projectRoot, stdio: 'inherit', shell: true });
     install.on('close', () => {
-        fs.writeFileSync(path.join(projectRoot, 'tailwind.config.js'), 'export default { content: ["./index.html", "./src/**/*.{svelte,js,ts,jsx,tsx,viand}"], theme: { extend: {} }, plugins: [], }');
+        fs.writeFileSync(path.join(projectRoot, 'tailwind.config.js'), 'export default { content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx,viand}"], theme: { extend: {} }, plugins: [], }');
         fs.writeFileSync(path.join(projectRoot, 'postcss.config.js'), 'export default { plugins: { "@tailwindcss/postcss": {}, autoprefixer: {}, }, }');
         fs.writeFileSync(path.join(srcDir, 'app.css'), '@import "tailwindcss";\n@source "./src/**/*.viand";');
         console.log("✅ Tailwind configured.");

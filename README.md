@@ -1,7 +1,7 @@
 Viand 🌿
 Write once. Morph anywhere.
 
-Viand (a play on Andrea and Via) is a high-level, indentation-based programming language that eliminates frontend boilerplate. It is a "parasitic" language that transpiles into highly optimized Svelte code, targeting Tauri for desktop and standard engines for the web.
+Viand (a play on Andrea and Via) is a high-level, indentation-based programming language that eliminates frontend boilerplate. It compiles into highly optimized JavaScript driven by a fine-grained Signal foundation (@preact/signals-core), targeting Tauri for desktop and standard engines for the web.
 
 ✨ Why Viand?
 Zero Noise: No curly braces, no semi-colons, no boilerplate imports. Just clean, Python-style indentation.

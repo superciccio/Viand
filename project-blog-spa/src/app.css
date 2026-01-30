@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @source "../index.html";
-@source "./**/*.{svelte,js,ts,viand}";
+@source "./**/*.js,ts,viand}";
 
 @theme {
   --color-brand: #3b82f6;

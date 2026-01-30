@@ -3,18 +3,18 @@
 This document tracks the strategic development milestones for the Viand language, moving from a UI prototype to a **Full-Stack Native Application DSL.**
 
 ## 🛡️ Core Design Philosophy (PITA Prevention)
-Viand is built to surgically remove the friction found in modern frameworks (Next.js, SvelteKit, Astro):
+Viand is built to surgically remove the friction found in modern frameworks (Next.js, React, Vue):
 1. **Isomorphism by Keyword:** No `'use client'`/`'use server'`. Use `component` vs `server`.
-2. **The Sibling Pattern:** No `+page.server.ts` scavenger hunts. Use `Home.viand`, `Home.sql`, `Home.api`.
-3. **Ghost Mode Tooling:** The developer only authors `.viand`. The compiler handles the "Ghost Code" (Svelte/JS/SQL Bridge).
+2. **The Sibling Pattern:** No scavenger hunts for logic files. Use `Home.viand`, `Home.sql`, `Home.api`.
+3. **Ghost Mode Tooling:** The developer only authors `.viand`. The compiler handles the "Ghost Code" (JS/Signal/SQL Bridge).
 4. **Declarative Interop:** Use `sync`, `on change`, and `raw` to bridge the gap to third-party JS libraries safely.
 
 ---
 
-## 🚩 Milestone 0: Architecture Refactor (The "Object-way") [COMPLETED]
+## 🚩 Milestone 0: Architecture Refactor (The "Foundry") [COMPLETED]
 - [x] **Component Manifest:** Structured JS object IR.
-- [x] **Recursive Renderer:** Reliable Svelte 5 generation.
-- [x] **Svelte 5 Runes:** Target `$state`, `$derived`, and `$props`.
+- [x] **Recursive Renderer:** Standalone Hyperscript factory generation.
+- [x] **Fine-grained Signals:** Target `@preact/signals-core` foundation.
 
 ## 🚩 Milestone 1-4: Language Core [COMPLETED]
 - [x] **Control Flow:** `each`, `if/else`, and `match`.
@@ -22,19 +22,18 @@ Viand is built to surgically remove the friction found in modern frameworks (Nex
 - [x] **Bindings & Events:** Generic `bind:` and event modifiers.
 - [x] **Viand-Native CSS:** Indentation-based styling.
 
-## 🚩 Milestone 5: The "Steel" Foundation (Hardening) [PARTIALLY COMPLETED]
-- [x] **Modular Compiler:** Refactored into `parser` and specialized `renderers` (Svelte/Logic/Test/Static).
+## 🚩 Milestone 5: The "Steel" Foundation (Hardening) [COMPLETED]
+- [x] **Modular Compiler:** Refactored into `parser` and specialized `renderers` (Signals/Test/Static).
 - [x] **Acorn Integration:** Real JS parsing for logic and expressions.
 - [x] **Vite Plugin:** Native `.viand` support (in-memory compilation).
 - [x] **TypeScript Refactor:** Port the compiler to TS.
 - [ ] **Error Resilience:** Smarter error messages with source-line indicators.
 
-## 🚩 Milestone 5.2: Integrated Native Testing [COMPLETED]
+## 🚩 Milestone 5.2: Integrated Native Testing [IN PROGRESS]
 - [x] **`test` Block:** Root-level container for test suites.
 - [x] **`must` Keyword:** Clean assertion syntax (e.g., `must find "button"`).
-- [x] **Brain-Body-Critic Architecture:** Shared reactive logic (.svelte.ts) for View and Test.
-- [x] **@logic Persona:** In-memory state testing via mirrored classes.
-- [x] **@ui Persona:** Headless DOM verification (Vitest + JSDOM).
+- [x] **Pure JS Logic Testing:** In-memory state testing via reactive factories.
+- [ ] **Headless DOM verification:** (Migration to Signals-based JSDOM tests).
 - [x] **Smoke Testing:** `viand verify` for automated health checks.
 
 ## 🚩 Milestone 6: Sibling Resource Awareness [COMPLETED]
@@ -43,13 +42,12 @@ Viand is built to surgically remove the friction found in modern frameworks (Nex
 - [x] **Resource Injection:** Make `sql.labelName()` available inside Viand functions.
 
 ## 🚩 Milestone 7: Advanced Composition (The Shell Pillar) [COMPLETED]
-- [x] **`slot:` keyword:** Support for Svelte 5 snippets and slots.
-- [x] **Auto-Snippets:** Indented children automatically wrapped in snippets.
-- [x] **UI as Props:** Passing Viand view-nodes into child components.
+- [x] **`slot:` keyword:** Support for Signals-based slots.
+- [x] **UI as Props:** Passing Viand view-nodes into child components via `children` prop.
 
 ## 🚩 Milestone 8: Global State (The Memory Pillar) [COMPLETED]
 - [x] **`memory` keyword:** Define shared reactive singletons.
-- [x] **Shared Brains:** Triple-file architecture ensuring 1:1 logic parity.
+- [x] **Module Bridge:** Triple-file architecture ensuring 1:1 logic parity.
 - [x] **Smart Interpolation:** Automatic evaluation of global namespaces in views.
 
 ## 🚩 Milestone 9: Executive Routing (The Navigation Pillar) [COMPLETED]
