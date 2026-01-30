@@ -1,10 +1,18 @@
 use router
+use intl
 
 component Shell:
     view:
         nav:
-            a(href: '/', class:active: router.path == '/'): "Home"
-            a(href: '/about/', class:active: router.path == '/about'): "About"
+            div .flex .items-center .gap-6:
+                a(href: '/', class:active: router.path == '/'): "Home"
+                a(href: '/about/', class:active: router.path == '/about'): "About"
+            
+            div .flex .items-center .gap-4:
+                # Language Dropdown
+                select(bind:value: intl.locale, class: 'px-2 py-1 border rounded bg-white text-sm'):
+                    option(value: 'en'): "English"
+                    option(value: 'it'): "Italiano"
         
         main:
             slot:
@@ -15,7 +23,8 @@ component Shell:
     style:
         nav:
             display: flex
-            gap: 20px
+            justify-content: space-between
+            align-items: center
             padding: 20px
             background: #f4f4f4
         

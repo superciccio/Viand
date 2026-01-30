@@ -14,6 +14,8 @@ export function generateSvelte5(manifest: ComponentManifest): string {
             script += `  import { router } from "./viand-router.svelte.ts";\n`;
         } else if (path === 'viand:notify') {
             script += `  import { notify } from "./viand-notify.ts";\n`;
+        } else if (path === 'viand:intl') {
+            script += `  import { intl } from "./viand-intl.ts";\n`;
         } else if (path.endsWith('.viand')) {
 
             script += `  import ${i.name} from "${path}";

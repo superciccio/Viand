@@ -8,6 +8,8 @@ export function generateLogicClass(manifest: ComponentManifest): string {
             script += `import { router } from "./viand-router.svelte.ts";\n`;
         } else if (path === 'viand:notify') {
             script += `import { notify } from "./viand-notify.ts";\n`;
+        } else if (path === 'viand:intl') {
+            script += `import { intl } from "./viand-intl.ts";\n`;
         } else if (path.endsWith('.viand')) {
             return; 
         } else {
@@ -26,10 +28,8 @@ export function generateLogicClass(manifest: ComponentManifest): string {
     manifest.reactive.forEach(r => {
         const expr = r.expression.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
         if (expr.includes('api.') || expr.includes('(')) {
-            // Async Sync: Needs a backing state
             code += `  ${r.id} = $state(undefined);\n`;
         } else {
-            // Pure Derived
             code += `  ${r.id} = $derived(${expr.replace(/\bapi\./g, 'this.api.')});\n`;
         }
     });
@@ -38,10 +38,7 @@ export function generateLogicClass(manifest: ComponentManifest): string {
         if (typeof line === 'string') {
             const trimmedLine = line.trim();
             if (!trimmedLine || trimmedLine.startsWith('#') || trimmedLine.startsWith('//')) return "";
-            
-            // Fix: 'raw' uses JSON snapshot for maximum compatibility with JS libs
             let cleaned = line.replace(/\braw\s+\$([a-zA-Z0-9_]+)/g, 'JSON.parse(JSON.stringify(this.$1))');
-            
             cleaned = cleaned.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
             cleaned = cleaned.replace(/\b_\./g, 'this.'); 
             cleaned = cleaned.replace(/\bsql\./g, 'this.sql.');
@@ -50,10 +47,7 @@ export function generateLogicClass(manifest: ComponentManifest): string {
         } else if (line.type === 'js-block') {
             const rawH = line.body[0].toString().trim();
             let h = rawH.replace(/^if\s+(.*):$/, 'if ($1) {');
-            
-            // Fix: handle 'raw' in block headers
             h = h.replace(/\braw\s+\$([a-zA-Z0-9_]+)/g, 'JSON.parse(JSON.stringify(this.$1))');
-            
             h = h.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
             h = h.replace(/\b_\./g, 'this.');
             h = h.replace(/\bapi\./g, 'this.api.');
@@ -62,28 +56,30 @@ export function generateLogicClass(manifest: ComponentManifest): string {
         return "";
     }).join('');
 
-    // 3. Constructor (Sync & Watch)
+    // 3. Constructor
     code += `\n  constructor() {\n`;
-    
+    if (Object.keys(manifest.lang).length > 0) {
+        code += `    intl.load(${JSON.stringify(manifest.lang)});\n`;
+    }
     manifest.reactive.forEach(r => {
         const expr = r.expression.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
         if (expr.includes('api.') || expr.includes('(')) {
             code += `    $effect(() => {\n`;
             code += `      (async () => {\n`;
-            code += `        this.${r.id} = await ${expr.replace(/\bapi\./g, 'this.api.')};\n`;
+            code += `        this.${r.id} = await ${expr.replace(/\bapi\./g, 'this.api.')};
+`;
             code += `      })();\n`;
             code += `    });\n`;
         }
     });
-
     manifest.watch.forEach(w => {
         const dep = w.dependency.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
         code += `    $effect(() => {\n`;
-        code += `      const __dep = ${dep};\n`;
+        code += `      const __dep = ${dep};
+`;
         code += renderBody(w.body, "      ");
         code += `    });\n`;
     });
-    
     code += `  }\n`;
 
     // 4. Methods
@@ -114,10 +110,14 @@ export function generateLogicClass(manifest: ComponentManifest): string {
             });
             code += `      try {\n`;
             code += `        const res = await fetch(url, { method: "${endpoint.method}", headers: ${JSON.stringify(endpoint.headers || {})} });\n`;
-            code += `        if (res.ok) { const ct = res.headers.get("content-type"); if (ct && ct.includes("json")) return await res.json(); }\n`;
-            code += `      } catch (e) { }\n`;
-            if (endpoint.mock) code += `      return ${endpoint.mock.trim()};\n`;
-            code += `      return null;\n`;
+            code += `        if (res.ok) { const ct = res.headers.get("content-type"); if (ct && ct.includes("json")) return await res.json(); }
+`;
+            code += `      } catch (e) { }
+`;
+            if (endpoint.mock) code += `      return ${endpoint.mock.trim()};
+`;
+            code += `      return null;
+`;
             code += `    },\n`;
         });
         code += `  }\n`;

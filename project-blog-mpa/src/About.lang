@@ -1,0 +1,27 @@
+title:
+    en: "The Viand Philosophy"
+    it: "La Filosofia Viand"
+
+mission:
+    en: "Viand was born from a desire to make software engineering as simple as writing a document."
+    it: "Viand è nata dal desiderio di rendere l'ingegneria del software semplice come scrivere un documento."
+
+feature_1:
+    en: "Zero boilerplate"
+    it: "Zero codice ripetitivo"
+
+feature_2:
+    en: "Indentation-based clarity"
+    it: "Chiarezza basata sull'indentazione"
+
+feature_3:
+    en: "Integrated tests"
+    it: "Test integrati"
+
+feature_4:
+    en: "Isomorphic by design"
+    it: "Isomorfico per design"
+
+footer_note:
+    en: "This page was baked fresh by the Viand CLI."
+    it: "Questa pagina è stata sfornata fresca dalla CLI di Viand."

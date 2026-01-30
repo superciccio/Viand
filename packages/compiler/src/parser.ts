@@ -42,7 +42,10 @@ export function cleanLogic(code: string): string {
 export function cleanViandText(text: string): string {
     if (typeof text !== 'string') return text;
     let cleaned = text.trim();
-    cleaned = cleaned.replace(/["']\s*\+\s*/g, '').replace(/\+\s*["']/g, '').replace(/["']/g, '');         
+    // Only strip quotes if they are at the start/end of the whole string
+    if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+        cleaned = cleaned.slice(1, -1);
+    }
     cleaned = cleaned.replace(/\$([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_.]+)*)/g, '{$1}');
     return cleaned;
 }
@@ -62,11 +65,11 @@ export function findSplitColon(text: string): number {
     return -1;
 }
 
-export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: string = "", apiSource: string = ""): { manifest: ComponentManifest, reports: string[] } {
+export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: string = "", apiSource: string = "", langSource: string = ""): { manifest: ComponentManifest, reports: string[] } {
     const manifest: ComponentManifest = {
         name: "Component",
         isMemory: false,
-        imports: [], props: [], state: [], reactive: [], functions: [], onMount: [], watch: [], refs: [], styles: [], view: [], tests: [], queries: [], api: [], slots: []
+        imports: [], props: [], state: [], reactive: [], functions: [], onMount: [], watch: [], refs: [], styles: [], view: [], tests: [], queries: [], api: [], lang: {}, slots: []
     };
 
     if (sqlSource) {
@@ -128,6 +131,27 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
         });
         if (currentApi) manifest.api.push(currentApi);
     }
+
+    if (langSource) {
+        const lines = langSource.split('\n');
+        let currentKey = "";
+        lines.forEach(line => {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) return;
+            const indentMatch = line.match(/^(\s*)/);
+            const indent = indentMatch ? indentMatch[0].length : 0;
+            const parts = trimmed.split(':');
+            const key = parts[0].trim();
+            const val = parts.slice(1).join(':').trim();
+
+            if (indent === 0) {
+                currentKey = key;
+                manifest.lang[currentKey] = {};
+            } else if (currentKey) {
+                manifest.lang[currentKey][key] = val.replace(/^["'](.*)["']$/, '$1').trim();
+            }
+        });
+    }
     
     const stack: any[] = [{ type: 'root', children: manifest.view, depth: -1 }]; 
 
@@ -136,8 +160,6 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
         while (stack.length > 1 && token.depth <= stack[stack.length - 1].depth) stack.pop();
         const context = stack[stack.length - 1];
 
-        // 🧠 PRIORITY 1: LOGIC BODY CAPTURE
-        // If we are already in a logic context, EVERYTHING indented is logic.
         if (context.body) {
             if (token.type === 'CONTROL_FLOW' && /^if\b/.test(trimmed)) {
                 const b: ManifestFunction = { type: 'js-block', body: [trimmed], depth: token.depth, line: token.line };
@@ -173,6 +195,10 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 manifest.imports.push({ name: 'notify', path: 'viand:notify' });
                 continue;
             }
+            if (trimmed === 'use intl') {
+                manifest.imports.push({ name: 'intl', path: 'viand:intl' });
+                continue;
+            }
             const m = trimmed.match(/use\s+(.+?)\s+from\s+["'](.*?)["']/);
             if (m) { manifest.imports.push({ name: m[1].replace(/[{}]/g, '').trim(), path: m[2] }); continue; }
             const m2 = trimmed.match(/use\s+(\w+)/);
@@ -193,9 +219,9 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             continue;
         }
         if (token.type === 'STATE_VARIABLE') {
-            const idMatch = trimmed.match(/^\$([a-z_]\w*)/i);
-            if (idMatch) {
-                const id = idMatch[1];
+            const m = trimmed.match(/^\$([a-z_]\w*)/i);
+            if (m) {
+                const id = m[1];
                 let type = 'any', value = 'undefined';
                 const tm = trimmed.match(/:\s*([a-z0-9_[\\]+)/i); if (tm) type = tm[1];
                 const vm = trimmed.match(/=\s*(.*)$/); if (vm) value = vm[1].trim();
@@ -316,8 +342,17 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
 
         if (token.type === 'UI_ELEMENT' && context.children) {
             const idx = findSplitColon(trimmed);
-            const declaration = (idx !== -1 && !trimmed.endsWith(')')) ? trimmed.slice(0, idx).trim() : trimmed.replace(/:$/, '').trim();
-            const inline = (idx !== -1 && !trimmed.endsWith(')')) ? trimmed.slice(idx + 1).trim() : "";
+            let declaration = "";
+            let inline = "";
+            
+            if (idx !== -1) {
+                // Heuristic: If the colon is part of an attribute (inside parens), it's not the split colon.
+                // findSplitColon already handles depth, so we trust it.
+                declaration = trimmed.slice(0, idx).trim();
+                inline = trimmed.slice(idx + 1).trim();
+            } else {
+                declaration = trimmed.replace(/:$/, '').trim();
+            }
             if (declaration.startsWith('slot')) {
                 let slotName = "children";
                 const sm = declaration.match(/slot\s+(\w+)/);

@@ -27,5 +27,6 @@ export type TokenType =
         body?: string,
         mock?: string
     }[];
+    lang: Record<string, Record<string, string>>;
     slots: string[];
 }

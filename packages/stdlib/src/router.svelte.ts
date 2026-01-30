@@ -37,9 +37,16 @@ class Router {
     if (!isBrowser) return;
     
     window.addEventListener('popstate', () => {
-      this.#url = window.location.pathname;
+      this.#url = this.#normalize(window.location.pathname);
     });
+  }
 
+  /**
+   * Executive Command: Enable SPA mode (interception)
+   */
+  enableSPA() {
+    if (!isBrowser) return;
+    
     // Intercept <a> tag clicks for seamless navigation
     window.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;

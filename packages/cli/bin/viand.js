@@ -34,12 +34,17 @@ function preflight() {
     const notifyDest = path.join(srcDir, 'viand-notify.ts');
     if (fs.existsSync(notifySrc)) fs.copyFileSync(notifySrc, notifyDest);
 
+    const intlSrc = path.resolve(__dirname, '../../stdlib/src/intl.ts');
+    const intlDest = path.join(srcDir, 'viand-intl.ts');
+    if (fs.existsSync(intlSrc)) fs.copyFileSync(intlSrc, intlDest);
+
     const files = fs.readdirSync(srcDir);
     files.forEach(file => {
         if (file.endsWith('.viand')) {
             const filePath = path.join(srcDir, file);
             const sqlPath = filePath.replace('.viand', '.sql');
             const apiPath = filePath.replace('.viand', '.api');
+            const langPath = filePath.replace('.viand', '.lang');
             
             const code = fs.readFileSync(filePath, 'utf-8');
             let sql = "";
@@ -54,8 +59,14 @@ function preflight() {
                 console.log(`🔍 Found API sibling: ${file.replace('.viand', '.api')}`);
             }
 
+            let langSource = "";
+            if (fs.existsSync(langPath)) {
+                langSource = fs.readFileSync(langPath, 'utf-8');
+                console.log(`🔍 Found Intl sibling: ${file.replace('.viand', '.lang')}`);
+            }
+
             try {
-                const { tests, logic } = processViand(code, sql, apiSource);
+                const { tests, logic } = processViand(code, sql, apiSource, langSource);
                 // Always write logic file (Memory or Component)
                 if (logic) {
                     fs.writeFileSync(filePath.replace('.viand', '.viand.logic.svelte.ts'), logic);

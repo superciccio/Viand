@@ -10,7 +10,7 @@ export default defineConfig({
     viand(),
     svelte({
       preprocess: vitePreprocess(),
-      extensions: ['.svelte', '.viand']
+      extensions: ['.svelte', '.viand', '.svelte.ts', '.svelte.js']
     })
   ],
   test: {

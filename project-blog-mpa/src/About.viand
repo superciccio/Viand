@@ -1,13 +1,26 @@
 use Shell from "./Shell.viand"
+use intl
 
 component About:
     view:
         Shell:
-            h1: "The Viand Philosophy"
-            p: "Viand was born from a desire to make software engineering as simple as writing a document."
+            h1: intl.t('title')
+            p: intl.t('mission')
             ul:
-                li: "Zero boilerplate"
-                li: "Indentation-based clarity"
-                li: "Integrated tests"
-                li: "Isomorphic by design"
-            p: "This page was baked fresh by the Viand CLI."
+                li: intl.t('feature_1')
+                li: intl.t('feature_2')
+                li: intl.t('feature_3')
+                li: intl.t('feature_4')
+            p: intl.t('footer_note')
+
+    test About:
+        @ui:
+            # 1. Default English Check
+            set intl.locale = "en"
+            must find "h1" with text "The Viand Philosophy"
+            must find "li" with text "Zero boilerplate"
+
+            # 2. Switch to Italian
+            set intl.locale = "it"
+            must find "h1" with text "La Filosofia Viand"
+            must find "li" with text "Zero codice ripetitivo"

@@ -24,10 +24,10 @@ export function compile(code: string, sql: string = "", api: string = ""): strin
 /**
  * Full compilation process.
  */
-export function processViand(code: string, sql: string = "", api: string = "") {
+export function processViand(code: string, sqlSource: string = "", apiSource: string = "", langSource: string = ""): { svelte: string, logic: string, tests: string, static: string, manifest: any, reports: string[] } {
     const { tokens, lexerErrors } = tokenize(code);
     const tree = analyzeHierarchy(tokens);
-    const { manifest, reports } = buildManifest(tree, lexerErrors, sql, api);
+    const { manifest, reports } = buildManifest(tree, lexerErrors, sqlSource, apiSource, langSource);
     
     return {
         manifest,
