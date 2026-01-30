@@ -1,9 +1,13 @@
 import { ComponentManifest, ManifestFunction } from '../types.ts';
-import { cleanLogic } from '../parser.ts';
 
 export function generateLogicClass(manifest: ComponentManifest): string {
     let code = `export class ${manifest.name}Logic {
 `;
+    
+    // Lifecycle: refs
+    manifest.refs.forEach(ref => code += `  ${ref} = $state(undefined);
+`);
+    
     manifest.state.forEach(s => code += `  ${s.id} = $state(${s.value});
 `);
     manifest.props.forEach(p => code += `  ${p.id} = $state(${p.value});
@@ -55,6 +59,18 @@ export function generateLogicClass(manifest: ComponentManifest): string {
         code += `  }
 `;
     }
+
+    if (manifest.onMount.length > 0) {
+        code += `
+  onMount() {
+`;
+        const mountBody = manifest.onMount.map(line => {
+            return line.replace(/\$([a-zA-Z0-9_]+)/g, 'this.$1');
+        }).join('\n    ');
+        code += `    ${mountBody}\n`;
+        code += `  }\n`;
+    }
+    
     code += `}
 `;
     if (manifest.isMemory) code += `

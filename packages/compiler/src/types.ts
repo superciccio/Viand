@@ -6,6 +6,7 @@ export type TokenType =
     | 'STATE_VARIABLE'
     | 'REACTIVE_DECLARATION'
     | 'FUNCTION_ACTION'
+    | 'LIFECYCLE_BLOCK'
     | 'STYLE_ROOT'
     | 'VIEW_ROOT'
     | 'TEST_ROOT'
@@ -52,6 +53,7 @@ export interface ViewNode {
     type: ViewNodeType;
     tag?: string;
     attrs?: Record<string, string>;
+    ref?: string;
     children: ViewNode[];
     content?: string;
     condition?: string;
@@ -85,6 +87,8 @@ export interface ComponentManifest {
     state: ManifestProp[];
     reactive: { id: string, expression: string }[];
     functions: ManifestFunction[];
+    onMount: string[];
+    refs: string[];
     styles: ManifestStyle[];
     view: ViewNode[];
     tests: TestNode[];

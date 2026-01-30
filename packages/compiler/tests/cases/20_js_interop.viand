@@ -1,0 +1,8 @@
+use { Chart } from "chart.js"
+
+component Dashboard:
+    on mount:
+        new Chart(_.chartEl, {})
+    
+    view:
+        canvas #chartEl:

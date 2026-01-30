@@ -1,6 +1,7 @@
 use router
 use Home from "./Home.viand"
 use About from "./About.viand"
+use Dashboard from "./Dashboard.viand"
 use NotFound from "./NotFound.viand"
 use Shell from "./Shell.viand"
 
@@ -10,4 +11,5 @@ component App:
             match router.path:
                 case "/": Home
                 case "/about": About
+                case "/dashboard": Dashboard
                 default: NotFound

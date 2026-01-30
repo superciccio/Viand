@@ -62,11 +62,12 @@ export function findSplitColon(text: string): number {
     return -1;
 }
 
-export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: string = ""): { manifest: ComponentManifest, reports: string[] } {
+export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: string = ""):
+ { manifest: ComponentManifest, reports: string[] } {
     const manifest: ComponentManifest = {
         name: "Component",
         isMemory: false,
-        imports: [], props: [], state: [], reactive: [], functions: [], styles: [], view: [], tests: [], queries: [], slots: []
+        imports: [], props: [], state: [], reactive: [], functions: [], onMount: [], refs: [], styles: [], view: [], tests: [], queries: [], slots: []
     };
 
     if (sqlSource) {
@@ -111,31 +112,37 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 manifest.imports.push({ name: 'router', path: 'viand:router' });
                 continue;
             }
-            const m = trimmed.match(/use\s+(\w+)\s+from\s+["'](.*?)["']/);
-            if (m) manifest.imports.push({ name: m[1], path: m[2] });
+            const m = trimmed.match(/use\s+(.+?)\s+from\s+["'](.*?)["']/);
+            if (m) {
+                manifest.imports.push({ name: m[1].replace(/[{}]/g, '').trim(), path: m[2] });
+                continue;
+            }
+            const m2 = trimmed.match(/use\s+(\w+)/);
+            if (m2) manifest.imports.push({ name: m2[1], path: `viand:${m2[1]}` });
             continue;
         }
         if (token.type === 'PROP_DECLARATION') {
-            const m = trimmed.match(/@prop\s+\"?([a-z_]\w*)/i);
+            const m = trimmed.match(/@prop\s+"?([a-z_]\w*)/i);
             if (m) {
                 const id = m[1];
                 let type = 'any', value = 'undefined';
-                const tm = trimmed.match(/:\s*([a-z0-9_[\]]+)/i); if (tm) type = tm[1];
+                const tm = trimmed.match(/:\s*([a-z0-9_[\\\]]+)/i); if (tm) type = tm[1];
                 const vm = trimmed.match(/=\s*(.*)$/); if (vm) value = vm[1].trim();
                 manifest.props.push({ id, type, value, line: token.line });
             }
             continue;
         }
         if (token.type === 'STATE_VARIABLE') {
-            if (context.type === 'function' || context.type === 'js-block' || context.type === 'test-node') {
-                const body = context.type === 'test-node' ? context.node.body : context.body;
+            if (context.type === 'function' || context.type === 'js-block' || context.type === 'test-node' || context.type === 'lifecycle') {
+                const body = (context.type === 'test-node') ? context.node.body : 
+                             (context.type === 'lifecycle') ? manifest.onMount : context.body;
                 body.push(token.content);
             } else {
                 const m = trimmed.match(/^\$([a-z_]\w*)/i);
                 if (m) {
                     const id = m[1];
                     let type = 'any', value = 'undefined';
-                    const tm = trimmed.match(/:\s*([a-z0-9_[\]]+)/i); if (tm) type = tm[1];
+                    const tm = trimmed.match(/:\s*([a-z0-9_[\\\]]+)/i); if (tm) type = tm[1];
                     const vm = trimmed.match(/=\s*(.*)$/); if (vm) value = vm[1].trim();
                     manifest.state.push({ id, type, value, line: token.line });
                 }
@@ -154,6 +161,10 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 manifest.functions.push(f);
                 stack.push(f);
             }
+            continue;
+        }
+        if (token.type === 'LIFECYCLE_BLOCK') {
+            stack.push({ type: 'lifecycle', depth: token.depth });
             continue;
         }
         if (token.type === 'STYLE_ROOT') {
@@ -178,6 +189,11 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             } else {
                 context.node.body.push(token.content);
             }
+            continue;
+        }
+
+        if (context.type === 'lifecycle') {
+            manifest.onMount.push(token.content);
             continue;
         }
 
@@ -218,35 +234,24 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 const splitIdx = findSplitColon(trimmed);
                 let condition = "";
                 let inline = "";
-                
                 if (splitIdx !== -1) {
                     condition = trimmed.slice(0, splitIdx).replace('case ', '').trim();
                     inline = trimmed.slice(splitIdx + 1).trim();
                 } else {
                     condition = trimmed.replace('case ', '').replace(':', '').trim();
                 }
-
                 const c = { condition, children: [] };
                 context.node.cases!.push(c);
                 stack.push({ type: 'view-node', children: c.children, depth: token.depth });
-                
-                if (inline) {
-                    c.children.push({ type: 'text', content: inline, children: [], line: token.line });
-                }
+                if (inline) c.children.push({ type: 'text', content: inline, children: [], line: token.line });
             } else if (trimmed.startsWith('default') && context.type === 'match-root') {
                 const splitIdx = findSplitColon(trimmed);
                 let inline = "";
-                if (splitIdx !== -1) {
-                    inline = trimmed.slice(splitIdx + 1).trim();
-                }
-                
+                if (splitIdx !== -1) inline = trimmed.slice(splitIdx + 1).trim();
                 const defaultNode = { children: [] };
                 context.node.defaultCase = defaultNode;
                 stack.push({ type: 'view-node', children: defaultNode.children, depth: token.depth });
-                
-                if (inline) {
-                    defaultNode.children.push({ type: 'text', content: inline, children: [], line: token.line });
-                }
+                if (inline) defaultNode.children.push({ type: 'text', content: inline, children: [], line: token.line });
             } else if (trimmed.startsWith('if ')) {
                 const node: ViewNode = { type: 'if', condition: trimmed.replace('if ', '').replace(':', '').trim(), children: [], line: token.line };
                 context.children.push(node);
@@ -264,12 +269,12 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
 
         if (token.type === 'UI_ELEMENT') {
             const idx = findSplitColon(trimmed);
-            const tagPart = idx !== -1 ? trimmed.slice(0, idx).trim() : trimmed.trim();
+            const declaration = idx !== -1 ? trimmed.slice(0, idx).trim() : trimmed.trim();
             const inline = idx !== -1 ? trimmed.slice(idx + 1).trim() : "";
             
-            if (tagPart.startsWith('slot')) {
+            if (declaration.startsWith('slot')) {
                 let slotName = "children";
-                const sm = tagPart.match(/slot\s+(\w+)/);
+                const sm = declaration.match(/slot\s+(\w+)/);
                 if (sm) slotName = sm[1];
                 if (!manifest.slots.includes(slotName)) manifest.slots.push(slotName);
                 const node: ViewNode = { type: 'slot', content: slotName, children: [], line: token.line };
@@ -277,17 +282,17 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 continue;
             }
 
-            let tagSide = tagPart;
+            let tagSide = declaration;
             let eventSide = "";
-            if (tagPart.includes('->')) {
-                // If it has attributes, the arrow must be AFTER the closing paren
-                const lastParen = tagPart.lastIndexOf(')');
-                const arrowIdx = tagPart.indexOf('->', lastParen);
-                if (arrowIdx !== -1) {
-                    tagSide = tagPart.slice(0, arrowIdx).trim();
-                    eventSide = tagPart.slice(arrowIdx + 2).trim();
-                }
+            
+            // Simple robust arrow split
+            if (declaration.includes('->')) {
+                const parts = declaration.split('->');
+                // The arrow is NOT allowed inside attributes, so the last part is the event
+                eventSide = parts.pop()!.trim();
+                tagSide = parts.join('->').trim();
             }
+
             const sp = tagSide.indexOf('(');
             const ep = tagSide.lastIndexOf(')');
             let tag = tagSide;
@@ -295,8 +300,6 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             if (sp !== -1 && ep !== -1) {
                 tag = tagSide.slice(0, sp).trim();
                 const attrRaw = tagSide.slice(sp + 1, ep);
-                
-                // Smart split by comma (respecting nested braces)
                 const pairs: string[] = [];
                 let start = 0, depth = 0;
                 for (let i = 0; i < attrRaw.length; i++) {
@@ -308,14 +311,11 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                     }
                 }
                 pairs.push(attrRaw.slice(start));
-
                 pairs.forEach(pair => {
                     const colonIdx = findSplitColon(pair);
                     if (colonIdx !== -1) {
                         let k = pair.slice(0, colonIdx).trim();
                         let v = pair.slice(colonIdx + 1).trim();
-                        
-                        // Handle Svelte directives (bind:class, class:active)
                         if (['bind', 'class', 'style'].includes(k)) {
                             const nextColon = findSplitColon(v);
                             if (nextColon !== -1) {
@@ -327,25 +327,31 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                     }
                 });
             }
+
             const tagParts = tag.split('.');
-            const actualTag = tagParts[0].trim();
+            let actualTag = tagParts[0].trim();
+            let refName = "";
+            if (actualTag.includes('#')) {
+                const parts = actualTag.split('#');
+                actualTag = parts[0].trim();
+                refName = parts[1].trim();
+                if (!manifest.refs.includes(refName)) manifest.refs.push(refName);
+            }
             if (tagParts.length > 1) attrs['class'] = tagParts.slice(1).join(' ').trim();
             if (eventSide) {
                 const m = eventSide.match(/^([a-z0-9_.]+)\s*\((.*?)\)$/i);
                 if (m) {
-                    // Store raw intent, let renderer decide scoping
                     if (!m[2].trim()) attrs['onclick'] = `__VIAND_CALL__${m[1]}()`;
                     else {
-                        const handler = m[2].trim();
-                        // If handler is a call (ends with ')'), use it as is. Else pass args.
-                        const callStr = handler.endsWith(')') ? handler : `${handler}(...args)`;
+                        const h = m[2].trim();
+                        const callStr = h.endsWith(')') ? h : `${h}(...args)`;
                         attrs[`on${m[1].replace(/\./g, '|')}`] = `__VIAND_CALL__${callStr}`;
                     }
                 } else {
                     attrs['onclick'] = `__VIAND_CALL__${eventSide.replace('()', '').trim()}()`;
                 }
             }
-            const node: ViewNode = { type: 'element', tag: actualTag, attrs, children: [], line: token.line };
+            const node: ViewNode = { type: 'element', tag: actualTag, attrs, ref: refName, children: [], line: token.line };
             context.children.push(node);
             if (inline) node.children.push({ type: 'text', content: inline, children: [], line: token.line });
             else if (trimmed.endsWith(':')) stack.push({ type: 'view-node', children: node.children, depth: token.depth });

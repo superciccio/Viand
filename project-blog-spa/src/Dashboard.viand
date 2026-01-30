@@ -1,0 +1,29 @@
+use { Chart } from "chart.js/auto"
+use Shell from "./Shell.viand"
+
+component Dashboard:
+    on mount:
+        new Chart(_.chartEl, {
+            type: 'bar',
+            data: {
+                labels: ['January', 'February', 'March', 'April'],
+                datasets: [{
+                    label: 'Viand Adoption',
+                    backgroundColor: '#3b82f6',
+                    data: [65, 59, 80, 81]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        })
+
+    view:
+        Shell:
+            h1 .text-3xl .font-bold .text-slate-800: "Analytics Dashboard"
+            p .text-slate-500 .mt-2: "Real-time Chart.js integration via Viand Bridge."
+            
+            div .mt-10 .p-8 .bg-white .rounded-2xl .shadow-xl .border .border-slate-100:
+                div .h-80:
+                    canvas #chartEl:

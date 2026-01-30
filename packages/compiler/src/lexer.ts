@@ -15,6 +15,7 @@ export function identifyToken(content: string): TokenType {
     if (trimmed.startsWith('sync ')) return 'REACTIVE_DECLARATION';
     if (trimmed.startsWith('use ')) return 'IMPORT_DECLARATION';
     if (trimmed.startsWith('fn ')) return 'FUNCTION_ACTION';
+    if (trimmed.startsWith('on mount:')) return 'LIFECYCLE_BLOCK';
     
     if (trimmed.startsWith('each ') || 
         trimmed.startsWith('if ') || 
@@ -42,7 +43,7 @@ export function tokenize(code: string) {
         const indentMatch = line.match(/^(\s*)/);
         const indent = indentMatch ? indentMatch[0].length : 0;
         
-        const content = line.split('//')[0].split('#')[0].trim();
+        const content = line.split('//')[0].trim();
         if (!content) return;
 
         if (indent % 4 !== 0) {

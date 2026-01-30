@@ -65,10 +65,13 @@ This document tracks the strategic development milestones for the Viand language
 - [ ] **CLI Scaffolding:** `viand create` for full-stack native apps.
 
 ## 🚩 Milestone 13: Partial Hydration (The Island Pillar)
-**Goal:** Reduce JS overhead for static sites (targeting 0kb - 2kb per page).
-- [ ] **Static View Rendering:** Compile pure HTML ViewNodes during `bake` instead of hydrating them in JS.
-- [ ] **Smart Hydration:** Automatically detect components with `$state` and only bundle JS for those specific "Islands."
-- [ ] **Lazy Loading:** Hydrate islands only when they enter the viewport (Intersection Observer).
+...
 
-## 🚩 Milestone 14: Markdown Integration (The Content Pillar)
+## 🚩 Milestone 14: JS Interoperability (The Bridge Pillar)
+**Goal:** Easy usage of existing NPM libraries (Charts, Maps, etc.).
+- [ ] **`#ref` Shorthand:** Automatic DOM element binding (e.g., `div #myRef:`).
+- [ ] **`on mount:` block:** Dedicated lifecycle logic for library initialization.
+- [ ] **NPM Import Support:** Support for named and default imports from `node_modules`.
+
+## 🚩 Milestone 15: Markdown Integration (The Content Pillar)
 ...

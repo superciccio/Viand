@@ -5,14 +5,20 @@ export function generateSvelte5(manifest: ComponentManifest): string {
     if (manifest.isMemory) return "";
     let script = `<script lang="ts">
 `;
+    if (manifest.onMount.length > 0) script += `  import { onMount } from "svelte";
+`;
+    
     manifest.imports.forEach(i => {
         let path = i.path;
         if (path === 'viand:router') {
-            script += `  import { router } from "./viand-router.svelte.ts";\n`;
+            script += `  import { router } from "./viand-router.svelte.ts";
+`;
         } else if (path.endsWith('.viand')) {
-            script += `  import ${i.name} from "${path}";\n`;
+            script += `  import ${i.name} from "${path}";
+`;
         } else {
-            script += `  import { ${i.name} } from "${path}";\n`;
+            script += `  import { ${i.name} } from "${path}";
+`;
         }
     });
     script += `  import { ${manifest.name}Logic } from "./${manifest.name}.viand.logic.svelte";
@@ -30,6 +36,8 @@ export function generateSvelte5(manifest: ComponentManifest): string {
 `;
     manifest.props.forEach(p => script += `  $effect(() => { _.${p.id} = ${p.id}; });
 `);
+    if (manifest.onMount.length > 0) script += `  onMount(() => _.onMount());
+`;
     script += `</script>
 
 `;
@@ -101,6 +109,9 @@ export function generateSvelte5(manifest: ComponentManifest): string {
                 }
                 return `${k}=${val}`;
             });
+            
+            if (node.ref) attrParts.push(`bind:this={_.${node.ref}}`);
+            
             const attrStr = attrParts.length > 0 ? ' ' + attrParts.join(' ') : '';
             const tag = node.tag ? node.tag.toLowerCase() : 'div';
             const isComponent = node.tag && node.tag[0] === node.tag[0].toUpperCase();
@@ -127,8 +138,7 @@ ${childrenStr}${indent}</${node.tag}>
         if (node.type === 'each') {
             const newLocalVars = [...localVars, node.item!];
             return `${indent}{#each _.${node.list} as ${node.item}}
-${node.children.map(c => renderNode(c, indent + "  ", newLocalVars)).join('')}${indent}{/each}
-`;
+${node.children.map(c => renderNode(c, indent + "  ", newLocalVars)).join('')}${indent}{/each}\n`;
         }
         if (node.type === 'if') {
             let out = `${indent}{#if ${cleanLogic(node.condition!)}} 
@@ -139,8 +149,7 @@ ${node.alternate.children.map(c => renderNode(c, indent + "  ", localVars)).join
                 else out += `${indent}{:else if ${cleanLogic(node.alternate.condition!)}} 
 ${node.alternate.children.map(c => renderNode(c, indent + "  ", localVars)).join('')}`;
             }
-            return out + `${indent}{/if}
-`;
+            return out + `${indent}{/if}\n`;
         }
         if (node.type === 'match') {
             const rawExpr = node.expression!.startsWith('$') ? node.expression!.slice(1) : node.expression!;
@@ -154,8 +163,7 @@ ${c.children.map(child => renderNode(child, indent + "  ", localVars)).join('')}
             });
             if (node.defaultCase) out += `${indent}{:else}
 ${node.defaultCase.children.map(child => renderNode(child, indent + "  ", localVars)).join('')}`;
-            return out + `${indent}{/if}
-`;
+            return out + `${indent}{/if}\n`;
         }
         return "";
     };
