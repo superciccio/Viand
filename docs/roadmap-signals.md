@@ -38,5 +38,15 @@ This roadmap tracks the development of the **Viand Standalone Engine**, moving a
 - [ ] **Native Sidecars:** Declarative bridge logic for Rust-based system commands.
 - [ ] **Mobile Hardware Access:** Native camera, GPS, and sensor integration via `system:` block.
 - [ ] **System Signals:** Bind UI state to native OS events (battery, window focus, file system).
-- [ ] **Unified Build:** `viand bake --native` to produce cross-platform binaries (iOS, Android, Windows, macOS, Linux).
+- [ ] **Unified Build:** `viand bake --native` to produce cross-platform binaries.
+
+## 🔱 Phase 8: The Oracle (AI Siblings)
+- [ ] **`.ai` Sibling support:** Declarative prompts managed by the compiler.
+- [ ] **Prompt Engineering DX:** Compile-time validation of LLM contexts.
+- [ ] **Isomorphic AI Bridge:** Automated Nitro routes for prompt execution.
+
+## 🔱 Phase 9: The Pantry (UI Ecosystem)
+- [ ] **Headless Glue:** Integration with **Ark UI** or **Radix UI** primitives.
+- [ ] **Tailwind Snippets:** Built-in support for Preline/Flowbite patterns.
+- [ ] **`viand add pantry`:** Component-level dependency manager.
 
