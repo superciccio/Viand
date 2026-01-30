@@ -1,87 +1,77 @@
 import { ComponentManifest, ViewNode } from '../types.ts';
-import { cleanLogic, cleanViandText } from '../parser.ts';
+import { cleanViandText } from '../parser.ts';
+import { generateLogicClass } from './logic.ts';
 
+/**
+ * ⚛️ Atomic Svelte 5 Renderer
+ * Assembles the Brain (Logic) and Face (View) into a single Svelte component.
+ */
 export function generateSvelte5(manifest: ComponentManifest): string {
-    if (manifest.isMemory) return "";
+    if (manifest.isMemory) {
+        // Global state still needs its own file structure or a specific export pattern
+        return generateLogicClass(manifest) + `\nexport const ${manifest.name} = create${manifest.name}Logic({});\n`;
+    }
+
     let script = `<script lang="ts">
 `;
-    if (manifest.onMount.length > 0) script += `  import { onMount } from "svelte";
+    script += `  import { onMount } from "svelte";
 `;
     
+    // 1. Standard Imports (Top Level)
     manifest.imports.forEach(i => {
-        let path = i.path;
-        if (path === 'viand:router') {
-            script += `  import { router } from "./viand-router.svelte.ts";\n`;
-        } else if (path === 'viand:notify') {
-            script += `  import { notify } from "./viand-notify.ts";\n`;
-        } else if (path === 'viand:intl') {
-            script += `  import { intl } from "./viand-intl.ts";\n`;
-        } else if (path.endsWith('.viand')) {
-
-            script += `  import ${i.name} from "${path}";
+        if (i.path === 'viand:router') {
+            script += `  import { router } from "./viand-router.svelte.ts";
+`;
+        } else if (i.path === 'viand:notify') {
+            script += `  import { notify } from "./viand-notify.ts";
+`;
+        } else if (i.path === 'viand:intl') {
+            script += `  import { intl } from "./viand-intl.svelte.ts";
+`;
+        } else if (i.path.endsWith('.viand')) {
+            script += `  import ${i.name} from "${i.path}";
 `;
         } else {
-            script += `  import { ${i.name} } from "${path}";
+            script += `  import { ${i.name} } from "${i.path}";
 `;
         }
     });
-    script += `  import { ${manifest.name}Logic } from "./${manifest.name}.viand.logic.svelte";
+
+    // 2. EMBEDDED LOGIC (The Brain)
+    script += `\n  // --- Viand Brain ---
 `;
+    script += generateLogicClass(manifest);
+    
+    // 3. COMPONENT BRIDGE
+    script += `\n  // --- Component Face Bridge ---\n`;
+    script += `  let __props = $props();\n`;
+
     const propNames = manifest.props.map(p => p.id);
     manifest.slots.forEach(s => { if (!propNames.includes(s)) propNames.push(s); });
+    
     if (propNames.length > 0) {
         script += `  let { ${propNames.map(id => {
             const p = manifest.props.find(x => x.id === id);
             return p ? `${id} = $bindable(${p.value})` : id;
-        }).join(', ')} } = $props();
-`;
+        }).join(', ')} } = __props;\n`;
     }
-    script += `  const _ = new ${manifest.name}Logic();
-`;
-    manifest.props.forEach(p => script += `  $effect(() => { _.${p.id} = ${p.id}; });
-`);
+
+    // Initialize Logic Factory with the shared props object
+    script += `  const _ = create${manifest.name}Logic(__props);\n`;
+    
     if (manifest.onMount.length > 0) script += `  onMount(() => _.onMount());
 `;
     script += `</script>
 
 `;
 
-    const renderNode = (node: ViewNode, indent: string, localVars: string[] = []): string => {
-        const importedNames = manifest.imports.map(i => i.name);
-        
+    const renderNode = (node: ViewNode, indent: string): string => {
         if (node.type === 'text') {
-            let content = node.content!.trim();
-            const importedNames = manifest.imports.map(i => i.name);
-            
-            // Fix: If the text is exactly an imported Component name, render it as a tag
-            if (importedNames.includes(content) && content[0] === content[0].toUpperCase()) {
-                return `${indent}<${content} />\n`;
-            }
-
-            // Handle interpolation of $var -> _.var in raw expressions
-            if (content.includes('$') || content.includes('+')) {
-                let interpolated = content.replace(/\$([a-zA-Z0-9_]+)/g, (match, p1) => {
-                    return (localVars.includes(p1) || importedNames.includes(p1)) ? p1 : `_.${p1}`;
-                });
-                const firstWord = interpolated.split(/[ .(+]/)[0];
-                if (importedNames.includes(firstWord) || content.includes('+')) {
-                    return `${indent}{${interpolated}}\n`;
-                }
-                content = interpolated;
-            }
-
-            // Normal text with interpolation $var -> {_.var}
+            let content = node.content.trim();
+            if (!content) return "";
             content = cleanViandText(content);
-            
-            // Fix: If the content IS a known local variable or imported name (e.g. item.text, State.theme), wrap it
-            const possibleVar = content.split('.')[0];
-            if (['sql', 'api'].includes(possibleVar)) {
-                return `${indent}{_.${content}}\n`;
-            }
-            if (localVars.includes(possibleVar) || importedNames.includes(possibleVar)) {
-                return `${indent}{${content}}\n`;
-            }
-
+            const importedNames = manifest.imports.map(i => i.name);
+            const localVars = [...manifest.props.map(p => p.id), ...manifest.state.map(s => s.id), ...manifest.reactive.map(r => r.id), 'router', 'intl', 'notify'];
             content = content.replace(/\{([a-zA-Z0-9_.]+)\}/g, (match, p1) => {
                 const rootVar = p1.split('.')[0];
                 if (localVars.includes(rootVar) || importedNames.includes(rootVar)) return `{${p1}}`;
@@ -89,113 +79,96 @@ export function generateSvelte5(manifest: ComponentManifest): string {
             });
             return `${indent}${content}\n`;
         }
-        if (node.type === 'slot') return `${indent}{@render ${node.content}()}\n`;
+
         if (node.type === 'element') {
-            const attrParts = Object.entries(node.attrs || {}).map(([k, v]) => {
-                let val = v;
-                if (v.startsWith('__VIAND_CALL__')) {
-                    const rawCall = v.replace('__VIAND_CALL__', '');
-                    const funcName = rawCall.split('(')[0];
-                    const rootVar = funcName.split('.')[0];
-                    const scopedCall = (localVars.includes(rootVar) || importedNames.includes(rootVar)) ? rawCall : `_.${rawCall}`;
-                    
-                    if (rawCall.includes('...args')) {
-                        val = `{(...args) => ${scopedCall}}`;
-                    } else {
-                        val = `{() => ${scopedCall}}`;
-                    }
-                } else if (v.startsWith('$')) {
-                    const varPath = v.slice(1);
-                    const rootVar = varPath.split('.')[0];
-                    if (localVars.includes(rootVar) || importedNames.includes(rootVar)) val = `{${varPath}}`;
-                    else val = `{_.${rootVar}}`;
-                } else if (k.includes(':')) {
-                    if (k.startsWith('bind:')) {
-                        const rootVar = v.split('.')[0];
-                        if (localVars.includes(rootVar) || importedNames.includes(rootVar)) val = `{${v}}`;
-                        else val = `{_.${v}}`;
-                    } else {
-                        val = `{${v}}`;
-                    }
-                } else if (!v.startsWith('{') && !v.startsWith('"') && !v.startsWith("'")) {
-                    val = `"${v}"`;
-                }
-                return `${k}=${val}`;
-            });
-            
-            if (node.ref) attrParts.push(`bind:this={_.${node.ref}}`);
-            
-            const attrStr = attrParts.length > 0 ? ' ' + attrParts.join(' ') : '';
-            const tag = node.tag ? node.tag.toLowerCase() : 'div';
-            const isComponent = node.tag && node.tag[0] === node.tag[0].toUpperCase();
-            
-            if (['input','img','br','hr'].includes(tag)) return `${indent}<${node.tag}${attrStr} />\n`;
-            
-            let childrenStr = "";
-            if (node.children.length > 0) {
-                if (isComponent) {
-                    childrenStr += `${indent}  {#snippet children()}
-`;
-                    childrenStr += node.children.map(c => renderNode(c, indent + "    ", localVars)).join('');
-                    childrenStr += `${indent}  {/snippet}
-`;
+            const tag = node.tag;
+            if (tag.startsWith('#snippet')) {
+                const snippetName = tag.replace('#snippet', '').trim();
+                let children = node.children.map(c => renderNode(c, indent + "  ")).join('');
+                return `${indent}{#snippet ${snippetName}}\n${children}${indent}{/snippet}\n`;
+            }
+
+            let attrStr = "";
+            Object.entries(node.attrs).forEach(([k, v]) => {
+                if (k.startsWith('on')) {
+                    const event = k.slice(2);
+                    const handler = v.replace('__VIAND_CALL__', '_.');
+                    attrStr += ` on${event}={${handler}}`;
+                } else if (k.startsWith('bind:')) {
+                    const target = v.replace(/\$([a-z0-9_]+)/gi, '_. $1').replace(/\bintl\./g, 'intl.').replace(/\brouter\./g, 'router.');
+                    attrStr += ` ${k}={${target}}`;
+                } else if (k.startsWith('class:')) {
+                    const condition = v.replace(/\$([a-z0-9_]+)/gi, '_. $1').replace(/\bintl\./g, 'intl.').replace(/\brouter\./g, 'router.');
+                    attrStr += ` ${k}={${condition}}`;
+                } else if (k === 'class') {
+                    attrStr += ` class="${v}"`;
                 } else {
-                    childrenStr += node.children.map(c => renderNode(c, indent + "  ", localVars)).join('');
+                    const val = v.replace(/\$([a-z0-9_]+)/gi, '_. $1').replace(/\bintl\./g, 'intl.').replace(/\brouter\./g, 'router.');
+                    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'" ) && val.endsWith("'" ))) {
+                        attrStr += ` ${k}=${val}`;
+                    } else {
+                        attrStr += ` ${k}={${val}}`;
+                    }
                 }
-            }
-            
-            return `${indent}<${node.tag}${attrStr}>
-${childrenStr}${indent}</${node.tag}>
+            });
+
+            if (node.ref) attrStr += ` bind:this={_.${node.ref}}`;
+
+            if (node.children.length === 0) return `${indent}<${tag}${attrStr} />\n`;
+            let children = node.children.map(c => renderNode(c, indent + "  ")).join('');
+            return `${indent}<${tag}${attrStr}>
+${children}${indent}</${tag}>
 `;
         }
+
         if (node.type === 'each') {
-            const newLocalVars = [...localVars, node.item!];
-            return `${indent}{#each _.${node.list} as ${node.item}}
-${node.children.map(c => renderNode(c, indent + "  ", newLocalVars)).join('')}${indent}{/each}\n`;
+            return `${indent}{#each _.${node.list} as ${node.item}}\n${node.children.map(c => renderNode(c, indent + "  ")).join('')}${indent}{/each}\n`;
         }
+
         if (node.type === 'if') {
-            let out = `${indent}{#if ${cleanLogic(node.condition!)}} 
-${node.children.map(c => renderNode(c, indent + "  ", localVars)).join('')}`;
+            let res = `${indent}{#if ${node.condition.replace(/\$([a-z0-9_]+)/gi, '_. $1')}}\n${node.children.map(c => renderNode(c, indent + "  ")).join('')}`;
             if (node.alternate) {
-                if (node.alternate.condition === 'true') out += `${indent}{:else}
-${node.alternate.children.map(c => renderNode(c, indent + "  ", localVars)).join('')}`; 
-                else out += `${indent}{:else if ${cleanLogic(node.alternate.condition!)}} 
-${node.alternate.children.map(c => renderNode(c, indent + "  ", localVars)).join('')}`;
+                if (node.alternate.condition === 'true') {
+                    res += `${indent}{:else}\n${node.alternate.children.map(c => renderNode(c, indent + "  ")).join('')}`;
+                } else {
+                    res += `${indent}{:else if ${node.alternate.condition.replace(/\$([a-z0-9_]+)/gi, '_. $1')}}\n${node.alternate.children.map(c => renderNode(c, indent + "  ")).join('')}`;
+                }
             }
-            return out + `${indent}{/if}\n`;
+            res += `${indent}{/if}\n`;
+            return res;
         }
+
         if (node.type === 'match') {
-            const rawExpr = node.expression!.startsWith('$') ? node.expression!.slice(1) : node.expression!;
-            const rootVar = rawExpr.split('.')[0];
-            const e = (localVars.includes(rootVar) || importedNames.includes(rootVar)) ? rawExpr : `_.${rawExpr}`;
-            let out = "";
-            node.cases!.forEach((c, i) => {
-                const header = i === 0 ? `{#if ${e} === ${c.condition}}` : `{:else if ${e} === ${c.condition}}`;
-                out += `${indent}${header}
-${c.children.map(child => renderNode(child, indent + "  ", localVars)).join('')}`;
+            let res = `${indent}{#match ${node.expression.replace(/\$([a-z0-9_]+)/gi, '_. $1')}}\n`;
+            node.cases?.forEach(c => {
+                res += `${indent}  {#case ${c.condition}}\n${c.children.map(child => renderNode(child, indent + "    ")).join('')}`;
             });
-            if (node.defaultCase) out += `${indent}{:else}
-${node.defaultCase.children.map(child => renderNode(child, indent + "  ", localVars)).join('')}`;
-            return out + `${indent}{/if}\n`;
+            if (node.defaultCase) {
+                res += `${indent}  {:default}\n${node.defaultCase.children.map(child => renderNode(child, indent + "    ")).join('')}`;
+            }
+            res += `${indent}{/match}\n`;
+            return res;
         }
+
+        if (node.type === 'slot') return `${indent}{@render ${node.content}()}\n`;
         return "";
     };
-    const finalView = manifest.view.map(n => renderNode(n, "" )).join('');
-    let style = "";
+
+    let view = manifest.view.map(n => renderNode(nodeToSnippet(n), "")).join('');
+    let css = "";
     if (manifest.styles.length > 0) {
-        style = `
-<style>
-`;
-        manifest.styles.forEach(s => {
-            style += `  ${s.selector} {
-`;
-            s.rules.forEach(r => style += `    ${r};
-`);
-            style += `  }
-`;
-        });
-        style += `</style>
-`;
+        css = `\n<style>\n${manifest.styles.map(s => `  ${s.selector} {\n${s.rules.map(r => `    ${r};`).join('\n')}\n  }`).join('\n')}\n</style>`;
     }
-    return script + finalView + style;
+
+    return script + view + css;
+}
+
+function nodeToSnippet(node: ViewNode): ViewNode {
+    if (node.type === 'element' && /^[A-Z]/.test(node.tag)) {
+        const children = node.children;
+        if (children.length > 0) {
+            node.children = [{ type: 'element', tag: '#snippet children()', attrs: {}, children: children, line: 0 }];
+        }
+    }
+    return node;
 }
