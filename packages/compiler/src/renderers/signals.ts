@@ -150,14 +150,15 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
                     type: 'text', 
                     value: val.replace(/\$([a-zA-Z0-9_]+)/g, '$1.value'), 
                     isReactive: true, 
-                    isExpression: true 
+                    isExpression: true,
+                    line: node.line
                 };
             }
 
             val = val.replace(/["']\s*\+\s*/g, '').replace(/\+\s*["']/g, '').replace(/["']/g, '');
             const template = val.replace(/\$([a-zA-Z0-9_]+)/g, '$\{ $1.value \}');
             
-            return { type: 'text', value: template, isReactive };
+            return { type: 'text', value: template, isReactive, line: node.line };
         }
 
         if (node.type === 'each') {
@@ -165,7 +166,8 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
                 type: 'each',
                 list: node.list.replace(/^\$/, ''),
                 item: node.item.replace(/^\$/, ''),
-                children: node.children.map(buildWidget).filter(w => w !== null) as ViandWidget[]
+                children: node.children.map(buildWidget).filter(w => w !== null) as ViandWidget[],
+                line: node.line
             };
         }
 
@@ -177,14 +179,16 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
                     condition: c.condition,
                     children: c.children.map(buildWidget).filter(w => w !== null) as ViandWidget[]
                 })),
-                defaultCase: node.defaultCase ? node.defaultCase.children.map(buildWidget).filter(w => w !== null) as ViandWidget[] : undefined
+                defaultCase: node.defaultCase ? node.defaultCase.children.map(buildWidget).filter(w => w !== null) as ViandWidget[] : undefined,
+                line: node.line
             };
         }
 
         if (node.type === 'slot') {
             return {
                 type: 'slot',
-                name: node.content
+                name: node.content,
+                line: node.line
             };
         }
 
@@ -211,7 +215,8 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
                 isComponent: /^[A-Z]/.test(node.tag),
                 ref: node.ref,
                 props,
-                children: node.children.map(buildWidget).filter(w => w !== null) as ViandWidget[]
+                children: node.children.map(buildWidget).filter(w => w !== null) as ViandWidget[],
+                line: node.line
             };
         }
 

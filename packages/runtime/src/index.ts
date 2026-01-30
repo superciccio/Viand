@@ -5,11 +5,12 @@ export { signal, computed, effect };
 type Props = Record<string, any>;
 type Child = HTMLElement | string | ReadonlySignal<any> | Child[];
 
-export function h(tag: string | Function, props: Props = {}, children: Child[] = [], ref: any = null): HTMLElement {
+export function h(tag: string | Function, props: Props = {}, children: Child[] = [], ref: any = null, widget: any = null): HTMLElement {
   if (typeof tag === 'function') {
       return tag(props);
   }
   const el = document.createElement(tag);
+  if (widget) (el as any).__viand = widget;
   if (typeof ref === 'function') {
       ref(el);
   }
@@ -92,9 +93,10 @@ export function h(tag: string | Function, props: Props = {}, children: Child[] =
   return el;
 }
 
-export function renderList(listSignal: any, itemTemplate: (item: any) => HTMLElement) {
+export function renderList(listSignal: any, itemTemplate: (item: any) => HTMLElement, widget: any = null) {
   const container = document.createElement('div');
   container.style.display = 'contents';
+  if (widget) (container as any).__viand = widget;
   const elementMap = new Map<any, HTMLElement>();
 
   effect(() => {
@@ -116,9 +118,10 @@ export function renderList(listSignal: any, itemTemplate: (item: any) => HTMLEle
   return container;
 }
 
-export function renderMatch(exprSignal: any, cases: { condition: any, template: () => HTMLElement }[], defaultTemplate: () => HTMLElement) {
+export function renderMatch(exprSignal: any, cases: { condition: any, template: () => HTMLElement }[], defaultTemplate: () => HTMLElement, widget: any = null) {
   const container = document.createElement('div');
   container.style.display = 'contents';
+  if (widget) (container as any).__viand = widget;
   effect(() => {
     container.innerHTML = '';
     const val = exprSignal.value;
@@ -143,3 +146,15 @@ export const api = {
     data: [12, 19, 3, 5, 2]
   })
 };
+
+if (typeof window !== 'undefined') {
+  (window as any).viand = {
+    inspect: (el: any) => {
+      if (el && el.__viand) {
+        console.log("🔍 Viand Widget Metadata:", el.__viand);
+        return el.__viand;
+      }
+      console.warn("⚠️ No Viand metadata found on this element.");
+    }
+  };
+}

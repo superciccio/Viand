@@ -35,19 +35,7 @@ export function emitJS(output: ComponentOutput): string {
         code += `  const ${r} = signal(null);\n`;
     });
 
-    // Debug: Print the Widget Tree
-    code += `  console.log("Viand Widget Tree for ${output.name}:", ${JSON.stringify(output.view, null, 2)});\n`;
-
     // 1. Emit Signals
-    output.signals.forEach(s => {
-        if (s.isDerived) {
-            code += `  const ${s.id} = computed(() => ${s.value});\n`;
-        } else {
-            code += `  const ${s.id} = signal(${s.value});\n`;
-        }
-    });
-
-    // 2. Emit Actions
     output.actions.forEach(a => {
         code += `  const ${a.name} = (${a.params.join(', ')}) => {\n`;
         a.body.forEach(line => code += `    ${line}\n`);
@@ -79,18 +67,18 @@ export function emitJS(output: ComponentOutput): string {
         }
 
         if (w.type === 'slot') {
-            return `h("div", { "style": "display: contents" }, [ ...(__props["${w.name}"] || []) ])`;
+            return `h("div", { "style": "display: contents" }, [ ...(__props["${w.name}"] || []) ], null, { type: 'slot', name: '${w.name}', line: ${w.line || 0} })`;
         }
 
         if (w.type === 'match') {
             const casesStr = w.cases.map(c => `{ condition: ${c.condition}, template: () => h("div", { style: "display: contents" }, [${c.children.map(printWidget).join(', ')}]) }`).join(', ');
             const defaultStr = w.defaultCase ? `() => h("div", { style: "display: contents" }, [${w.defaultCase.map(printWidget).join(', ')}])` : `() => h("div", { style: "display: contents" }, [])`;
-            return `renderMatch(computed(() => ${w.expression}), [${casesStr}], ${defaultStr})`;
+            return `renderMatch(computed(() => ${w.expression}), [${casesStr}], ${defaultStr}, { type: 'match', line: ${w.line || 0} })`;
         }
 
         if (w.type === 'each') {
             const children = w.children.map(printWidget).join(', ');
-            return `renderList(${w.list}, (${w.item}) => h("div", { style: "display: contents" }, [${children}]))`;
+            return `renderList(${w.list}, (${w.item}) => h("div", { style: "display: contents" }, [${children}]), { type: 'each', line: ${w.line || 0} })`;
         }
 
         if (w.type === 'element') {
@@ -99,11 +87,12 @@ export function emitJS(output: ComponentOutput): string {
             
             const tag = w.isComponent ? w.tag : `"${w.tag}"`;
             const ref = w.ref ? `(v) => ${w.ref}.value = v` : `null`;
+            const meta = `{ type: 'element', tag: ${tag}, line: ${w.line || 0} }`;
             
             if (w.isComponent) {
-                return `h(${tag}, { "children": [${childrenArr.join(', ')}], ${Object.entries(propsObj).map(([k, v]) => `"${k}": ${v}`).join(', ')} }, [], ${ref})`;
+                return `h(${tag}, { "children": [${childrenArr.join(', ')}], ${Object.entries(propsObj).map(([k, v]) => `"${k}": ${v}`).join(', ')} }, [], ${ref}, ${meta})`;
             } else {
-                return `h(${tag}, { ${Object.entries(propsObj).map(([k, v]) => `"${k}": ${v}`).join(', ')} }, [${childrenArr.join(', ')}], ${ref})`;
+                return `h(${tag}, { ${Object.entries(propsObj).map(([k, v]) => `"${k}": ${v}`).join(', ')} }, [${childrenArr.join(', ')}], ${ref}, ${meta})`;
             }
         }
 
@@ -111,7 +100,7 @@ export function emitJS(output: ComponentOutput): string {
             const children = w.children.map(printWidget).join(', ');
             // In pure DOM, a fragment is often a div or a real fragment. 
             // For now, let's use a wrapper div.
-            return `h("div", { "class": "fragment" }, [${children}])`;
+            return `h("div", { "class": "fragment" }, [${children}], null, { type: 'fragment', line: ${w.line || 0} })`;
         }
 
         return "null";

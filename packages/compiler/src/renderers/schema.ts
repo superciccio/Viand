@@ -16,12 +16,12 @@ export interface ActionSchema {
 }
 
 export type ViandWidget = 
-    | { type: 'element'; tag: string; isComponent?: boolean; ref?: string; props: Record<string, string>; children: ViandWidget[] }
-    | { type: 'text'; value: string; isReactive: boolean; isExpression?: boolean }
-    | { type: 'fragment'; children: ViandWidget[] }
-    | { type: 'each'; list: string; item: string; children: ViandWidget[] }
-    | { type: 'match'; expression: string; cases: { condition: string; children: ViandWidget[] }[]; defaultCase?: ViandWidget[] }
-    | { type: 'slot'; name: string };
+    | { type: 'element'; tag: string; isComponent?: boolean; ref?: string; props: Record<string, string>; children: ViandWidget[]; line?: number }
+    | { type: 'text'; value: string; isReactive: boolean; isExpression?: boolean; line?: number }
+    | { type: 'fragment'; children: ViandWidget[]; line?: number }
+    | { type: 'each'; list: string; item: string; children: ViandWidget[]; line?: number }
+    | { type: 'match'; expression: string; cases: { condition: string; children: ViandWidget[] }[]; defaultCase?: ViandWidget[]; line?: number }
+    | { type: 'slot'; name: string; line?: number };
 
 export interface ComponentOutput {
     name: string;
