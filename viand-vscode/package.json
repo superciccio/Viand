@@ -18,18 +18,15 @@
       "package": "vsce package"
     },
   "contributes": {
-    "languages": [
-      {
-        "id": "viand",
-        "aliases": [
-          "Viand",
-          "viand"
-        ],
-        "extensions": [
-          ".viand"
-        ]
-      }
-    ],
+        "languages": [{
+          "id": "viand",
+          "aliases": ["Viand", "viand"],
+          "extensions": [".viand"],
+          "icon": {
+            "light": "./viand-icon.svg",
+            "dark": "./viand-icon.svg"
+          }
+        }],
     "grammars": [
       {
         "language": "viand",
