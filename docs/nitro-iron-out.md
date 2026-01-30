@@ -16,6 +16,8 @@ This document tracks technical issues, deprecations, and "rough edges" discovere
 
 ## 🛠️ Pending Enhancements
 
-- [ ] **Dynamic DSL to JS:** Automatically transpile `.api` and `.sql` DSL into the `h3` compatible JS handlers shown in the prototype.
+- [x] **Dynamic .api DSL to JS:** Automatically transpile `.api` DSL into the `h3` compatible JS handlers.
+- [ ] **Dynamic .sql DSL to JS:** Implement similar transpilation for `.sql` siblings.
 - [ ] **Ghost Mode Integration:** Inject the Nitro `devHandler` for `.viand` files so SSR works without a manual `bake` step.
 - [ ] **Port Conflicts:** Handle port conflicts gracefully (currently it just bumps to 3001 if 3000 is occupied).
+- [ ] **Type-Safe API generation:** Generate TS types from the `.api` DSL for client-side Signal consumption.

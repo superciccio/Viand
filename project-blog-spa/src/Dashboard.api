@@ -1,8 +1,20 @@
 -- label: getAnalytics
 GET /api/v1/dashboard/analytics
-headers:
-    Content-Type: application/json
-query:
-    period: "monthly"
-mock:
-    { "success": true, "labels": ["Jan", "Feb", "Mar", "Apr"], "data": [45, 82, 120, 95] }
+logic:
+    return {
+        success: true,
+        source: "logic-block",
+        timestamp: new Date().toISOString(),
+        labels: ["Jan", "Feb", "Mar", "Apr"],
+        data: [45, 82, 120, 95]
+    };
+
+-- label: getEnvs
+GET /api/v1/debug/envs
+logic:
+    return {
+        success: true,
+        database: process.env.DATABASE_URL,
+        secret: process.env.API_SECRET_KEY ? "****" + process.env.API_SECRET_KEY.slice(-4) : "MISSING",
+        debug: process.env.DEBUG
+    };

@@ -40,6 +40,7 @@ To handle "complex" things, the foundation must be bulletproof.
     - `use storage` (Local/Cloud)
     - `use i18n` (Multi-language infrastructure)
     - `use ui` (A library of headless, accessible primitives)
+- **End-to-End Type Safety:** Generate TypeScript interfaces from `.api` and `.sql` DSLs so that frontend Signals are strictly typed against the server-side Siblings.
 
 ## 🏁 Conclusion
 Viand's edge isn't just "being fast"—it's **removing the cognitive load of modern web development.** By making everything a "Sibling" resource and leveraging Signals for performance, we can create a framework that scales from a simple blog to a massive native application without ever losing the simplicity of the Foundry.
