@@ -107,6 +107,10 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             continue;
         }
         if (token.type === 'IMPORT_DECLARATION') {
+            if (trimmed === 'use router') {
+                manifest.imports.push({ name: 'router', path: 'viand:router' });
+                continue;
+            }
             const m = trimmed.match(/use\s+(\w+)\s+from\s+["'](.*?)["']/);
             if (m) manifest.imports.push({ name: m[1], path: m[2] });
             continue;
@@ -211,13 +215,38 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 context.children.push(node);
                 stack.push({ type: 'match-root', node, depth: token.depth });
             } else if (trimmed.startsWith('case ') && context.type === 'match-root') {
-                const c = { condition: trimmed.replace('case ', '').replace(':', '').trim(), children: [] };
+                const splitIdx = findSplitColon(trimmed);
+                let condition = "";
+                let inline = "";
+                
+                if (splitIdx !== -1) {
+                    condition = trimmed.slice(0, splitIdx).replace('case ', '').trim();
+                    inline = trimmed.slice(splitIdx + 1).trim();
+                } else {
+                    condition = trimmed.replace('case ', '').replace(':', '').trim();
+                }
+
+                const c = { condition, children: [] };
                 context.node.cases!.push(c);
                 stack.push({ type: 'view-node', children: c.children, depth: token.depth });
+                
+                if (inline) {
+                    c.children.push({ type: 'text', content: inline, children: [], line: token.line });
+                }
             } else if (trimmed.startsWith('default') && context.type === 'match-root') {
+                const splitIdx = findSplitColon(trimmed);
+                let inline = "";
+                if (splitIdx !== -1) {
+                    inline = trimmed.slice(splitIdx + 1).trim();
+                }
+                
                 const defaultNode = { children: [] };
                 context.node.defaultCase = defaultNode;
                 stack.push({ type: 'view-node', children: defaultNode.children, depth: token.depth });
+                
+                if (inline) {
+                    defaultNode.children.push({ type: 'text', content: inline, children: [], line: token.line });
+                }
             } else if (trimmed.startsWith('if ')) {
                 const node: ViewNode = { type: 'if', condition: trimmed.replace('if ', '').replace(':', '').trim(), children: [], line: token.line };
                 context.children.push(node);
@@ -261,13 +290,36 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             let attrs: Record<string, string> = {};
             if (sp !== -1 && ep !== -1) {
                 tag = tagSide.slice(0, sp).trim();
-                tagSide.slice(sp + 1, ep).split(',').forEach(pair => {
-                    const pp = pair.split(':');
-                    if (pp.length >= 2) {
-                        let k = pp[0].trim();
-                        let vParts = pp.slice(1);
-                        if (['bind', 'class', 'style'].includes(k)) k += ':' + vParts.shift()!.trim();
-                        attrs[k] = vParts.join(':').trim();
+                const attrRaw = tagSide.slice(sp + 1, ep);
+                
+                // Smart split by comma (respecting nested braces)
+                const pairs: string[] = [];
+                let start = 0, depth = 0;
+                for (let i = 0; i < attrRaw.length; i++) {
+                    if (attrRaw[i] === '{' || attrRaw[i] === '(' || attrRaw[i] === '[') depth++;
+                    if (attrRaw[i] === '}' || attrRaw[i] === ')' || attrRaw[i] === ']') depth--;
+                    if (attrRaw[i] === ',' && depth === 0) {
+                        pairs.push(attrRaw.slice(start, i));
+                        start = i + 1;
+                    }
+                }
+                pairs.push(attrRaw.slice(start));
+
+                pairs.forEach(pair => {
+                    const colonIdx = findSplitColon(pair);
+                    if (colonIdx !== -1) {
+                        let k = pair.slice(0, colonIdx).trim();
+                        let v = pair.slice(colonIdx + 1).trim();
+                        
+                        // Handle Svelte directives (bind:class, class:active)
+                        if (['bind', 'class', 'style'].includes(k)) {
+                            const nextColon = findSplitColon(v);
+                            if (nextColon !== -1) {
+                                k += ':' + v.slice(0, nextColon).trim();
+                                v = v.slice(nextColon + 1).trim();
+                            }
+                        }
+                        attrs[k] = v;
                     }
                 });
             }

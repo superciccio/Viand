@@ -1,8 +1,10 @@
+use router
+
 component Shell:
     view:
         nav:
-            a(href: "/index.html"): "Home"
-            a(href: "/about.html"): "About"
+            a(href: "/", class:active: router.path == "/"): "Home"
+            a(href: "/about/", class:active: router.path == "/about"): "About"
         
         main:
             slot:
@@ -16,8 +18,15 @@ component Shell:
             gap: 20px
             padding: 20px
             background: #f4f4f4
+        
+        .active:
+            color: #ff3e00
+            font-weight: bold
+            text-decoration: underline
+
         main:
             padding: 40px
+        
         footer:
             border-top: 1px solid #eee
             padding: 20px

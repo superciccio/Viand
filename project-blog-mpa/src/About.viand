@@ -3,5 +3,11 @@ use Shell from "./Shell.viand"
 component About:
     view:
         Shell:
-            h1: "About This Site"
-            p: "Viand can handle simple static-like sites without the SPA overhead."
+            h1: "The Viand Philosophy"
+            p: "Viand was born from a desire to make software engineering as simple as writing a document."
+            ul:
+                li: "Zero boilerplate"
+                li: "Indentation-based clarity"
+                li: "Integrated tests"
+                li: "Isomorphic by design"
+            p: "This page was baked fresh by the Viand CLI."

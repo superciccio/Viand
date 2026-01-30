@@ -7,7 +7,9 @@ export function generateSvelte5(manifest: ComponentManifest): string {
 `;
     manifest.imports.forEach(i => {
         let path = i.path;
-        if (path.endsWith('.viand')) {
+        if (path === 'viand:router') {
+            script += `  import { router } from "./viand-router.svelte.ts";\n`;
+        } else if (path.endsWith('.viand')) {
             script += `  import ${i.name} from "${path}";\n`;
         } else {
             script += `  import { ${i.name} } from "${path}";\n`;
@@ -86,10 +88,14 @@ export function generateSvelte5(manifest: ComponentManifest): string {
                     const rootVar = varPath.split('.')[0];
                     if (localVars.includes(rootVar) || importedNames.includes(rootVar)) val = `{${varPath}}`;
                     else val = `{_.${rootVar}}`;
-                } else if (k.startsWith('bind:')) {
-                    const rootVar = v.split('.')[0];
-                    if (localVars.includes(rootVar) || importedNames.includes(rootVar)) val = `{${v}}`;
-                    else val = `{_.${v}}`;
+                } else if (k.includes(':')) {
+                    if (k.startsWith('bind:')) {
+                        const rootVar = v.split('.')[0];
+                        if (localVars.includes(rootVar) || importedNames.includes(rootVar)) val = `{${v}}`;
+                        else val = `{_.${v}}`;
+                    } else {
+                        val = `{${v}}`;
+                    }
                 } else if (!v.startsWith('{') && !v.startsWith('"') && !v.startsWith("'")) {
                     val = `"${v}"`;
                 }
@@ -139,7 +145,7 @@ ${node.alternate.children.map(c => renderNode(c, indent + "  ", localVars)).join
         if (node.type === 'match') {
             const rawExpr = node.expression!.startsWith('$') ? node.expression!.slice(1) : node.expression!;
             const rootVar = rawExpr.split('.')[0];
-            const e = localVars.includes(rootVar) ? rawExpr : `_.${rawExpr}`;
+            const e = (localVars.includes(rootVar) || importedNames.includes(rootVar)) ? rawExpr : `_.${rawExpr}`;
             let out = "";
             node.cases!.forEach((c, i) => {
                 const header = i === 0 ? `{#if ${e} === ${c.condition}}` : `{:else if ${e} === ${c.condition}}`;

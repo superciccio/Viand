@@ -14,13 +14,14 @@ This document tracks the strategic development milestones for the Viand language
 - [x] **Viand-Native CSS:** Indentation-based styling.
 
 ## 🚩 Milestone 5: The "Steel" Foundation (Hardening) [PARTIALLY COMPLETED]
+- [x] **Modular Compiler:** Refactored into `parser` and specialized `renderers` (Svelte/Logic/Test/Static).
 - [x] **Acorn Integration:** Real JS parsing for logic and expressions.
 - [x] **Vite Plugin:** Native `.viand` support (in-memory compilation).
 - [x] **TypeScript Refactor:** Port the compiler to TS.
 - [ ] **Compiler Validation:** Catch logic errors during IR build.
 - [x] **Error Mapping:** Source Map support for browser debugging.
 
-## 🚩 Milestone 5.2: Integrated Native Testing [PARTIALLY COMPLETED]
+## 🚩 Milestone 5.2: Integrated Native Testing [COMPLETED]
 - [x] **`test` Block:** Root-level container for test suites.
 - [x] **`must` Keyword:** Clean assertion syntax (e.g., `must find "button"`).
 - [x] **Brain-Body-Critic Architecture:** Shared reactive logic (.svelte.ts) for View and Test.
@@ -48,15 +49,26 @@ This document tracks the strategic development milestones for the Viand language
 - [ ] **`page-router` block:** A high-level declarative router syntax.
 - [ ] **`goto()` action:** Built-in navigation primitive.
 
-## 🚩 Milestone 10: Static HTML Generation (The SSG Pillar)
+## 🚩 Milestone 10: Static HTML Generation (The SSG Pillar) [COMPLETED]
 **Goal:** Turn Viand into a Page-First DSL (Jekyll/Hugo style).
-- [ ] **Zero-HTML Entry:** Generate full `index.html` documents directly from `.viand` files.
-- [ ] **Executive Build:** `viand build` produces a static `dist/` folder ready for deployment.
+- [x] **Zero-HTML Entry:** Generate full `index.html` documents directly from `.viand` files.
+- [x] **Executive Build:** `viand bake` produces a static `dist/` folder ready for deployment.
 
 ## 🚩 Milestone 11: The Tauri Auto-Bridge (The Native Monster)
-...
+**Goal:** Automate the Native/Web boundary.
+- [ ] **Zero-Rust Commands:** Generate Tauri Rust commands automatically based on SQL labels.
+- [ ] **Auto-Invoke:** Generate the `invoke()` calls in the generated logic.
+- [ ] **Native Plugin:** A Viand-Tauri plugin to handle generic data execution.
 
-## 🚩 Milestone 13: Markdown Integration (The Content Pillar)
-**Goal:** Allow authoring content in pure Markdown inside Viand.
-- [ ] **`markdown:` block:** Support for standard MD with component embedding.
-- [ ] **Frontmatter Awareness:** Parse page metadata natively.
+## 🚩 Milestone 12: The Meta-Framework (@viand/framework)
+- [ ] **Single Dependency:** Wrap Vite, Svelte, and Tauri into one toolkit.
+- [ ] **CLI Scaffolding:** `viand create` for full-stack native apps.
+
+## 🚩 Milestone 13: Partial Hydration (The Island Pillar)
+**Goal:** Reduce JS overhead for static sites (targeting 0kb - 2kb per page).
+- [ ] **Static View Rendering:** Compile pure HTML ViewNodes during `bake` instead of hydrating them in JS.
+- [ ] **Smart Hydration:** Automatically detect components with `$state` and only bundle JS for those specific "Islands."
+- [ ] **Lazy Loading:** Hydrate islands only when they enter the viewport (Intersection Observer).
+
+## 🚩 Milestone 14: Markdown Integration (The Content Pillar)
+...

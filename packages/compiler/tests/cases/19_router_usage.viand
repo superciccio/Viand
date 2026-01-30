@@ -1,0 +1,8 @@
+use router
+
+component App:
+    view:
+        match router.path:
+            case "/": "Home"
+            case "/about": "About"
+            default: "404"
