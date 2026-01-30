@@ -1,7 +1,9 @@
-use Shell from "./Shell.viand"
-
 component About:
     view:
-        Shell:
-            h1: "About SPA"
-            p: "This version proves Viand can handle dynamic page swapping."
+        h1 .text-3xl .font-bold .text-slate-800: "The Viand Philosophy"
+        p .mt-4: "Viand was born from a desire to make software engineering as simple as writing a document."
+        ul .list-disc .ml-6 .mt-4 .space-y-2:
+            li: "Zero boilerplate"
+            li: "Indentation-based clarity"
+            li: "Integrated tests"
+            li: "Isomorphic by design"

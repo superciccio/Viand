@@ -47,7 +47,13 @@ export function generateSvelte5(manifest: ComponentManifest): string {
         
         if (node.type === 'text') {
             let content = node.content!.trim();
+            const importedNames = manifest.imports.map(i => i.name);
             
+            // Fix: If the text is exactly an imported Component name, render it as a tag
+            if (importedNames.includes(content) && content[0] === content[0].toUpperCase()) {
+                return `${indent}<${content} />\n`;
+            }
+
             // Handle interpolation of $var -> _.var in raw expressions
             if (content.includes('$') || content.includes('+')) {
                 let interpolated = content.replace(/\$([a-zA-Z0-9_]+)/g, (match, p1) => {

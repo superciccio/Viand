@@ -1,7 +1,4 @@
-use Shell from "./Shell.viand"
-
 component Home:
     view:
-        Shell:
-            h1: "Viand SPA Blog"
-            p: "This is the SPA home. Navigation is instant and seamless."
+        h1 .text-4xl .font-extrabold .text-slate-900: "Viand SPA Blog"
+        p .text-lg .text-slate-600 .mt-4: "This is the SPA home. Navigation is instant and seamless."

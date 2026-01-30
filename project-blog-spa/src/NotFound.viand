@@ -1,8 +1,5 @@
-use Shell from "./Shell.viand"
-
 component NotFound:
     view:
-        Shell:
-            h1: "404 - Lost in the Indentation"
-            p: "The page you are looking for doesn't exist."
-            a(href: '/'): "Back to Safety"
+        h1 .text-3xl .font-bold .text-red-600: "404 - Lost in the Indentation"
+        p .mt-4: "The page you are looking for doesn't exist."
+        a(href: '/', class: 'mt-6 inline-block text-blue-600 underline'): "Back to Safety"
