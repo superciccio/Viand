@@ -2,18 +2,21 @@
   "name": "viand-lang",
   "displayName": "Viand Language Support",
   "description": "Syntax highlighting for the Viand Language",
-  "version": "0.0.1",
-  "publisher": "andrea",
-  "engines": {
-    "vscode": "^1.70.0"
-  },
-  "main": "./dist/extension.js",
-  "activationEvents": [
-    "onLanguage:viand"
-  ],
-  "scripts": {
-    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node"
-  },
+    "version": "0.0.1",
+    "publisher": "viand-lang",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/viand-lang/viand"
+    },
+    "engines": { "vscode": "^1.70.0" },
+    "main": "./dist/extension.js",
+    "activationEvents": [
+      "onLanguage:viand"
+    ],
+    "scripts": {
+      "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+      "package": "vsce package"
+    },
   "contributes": {
     "languages": [
       {
