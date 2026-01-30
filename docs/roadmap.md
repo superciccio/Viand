@@ -17,6 +17,7 @@ This document serves as the single source of truth for Viand's evolution. It pri
 - [ ] **The `spread:` Keyword:** Implement attribute spreading for headless UI support.
 - [ ] **Gradual Typing:** Add `strict: true` and basic type enforcement (@prop name: string).
 - [ ] **LSP Alpha:** Basic workspace indexer for Sibling-aware autocomplete.
+- [ ] **`viand init` Templates:** Scaffold new projects with selectable templates (Blog, SPA, MPA, Library).
 
 ---
 
@@ -38,21 +39,21 @@ This document serves as the single source of truth for Viand's evolution. It pri
 
 ---
 
-## 📱 Phase 8: The Native Frontier (Tauri 2.0)
-**Goal:** Cross-platform dominance.
-
-- [ ] **`system:` Block:** Direct Rust-side hardware access (Mobile/Desktop).
-- [ ] **Mobile Presets:** Automated build/deploy for iOS and Android.
-- [ ] **Universal Build:** `viand bake --native`.
-
----
-
-## 🧠 Phase 9: The Summit (Optimization & Community)
+## 🧠 Phase 8: The Summit (Optimization & Community)
 **Goal:** Efficiency and scale.
 
 - [ ] **LIS Reconciliation:** Production-grade list diffing.
 - [ ] **Viand Playground:** Wasm-based online IDE for community onboarding.
 - [ ] **The `.policy` Sibling:** Declarative security layer for Nitro execution.
+
+---
+
+## 📱 Phase 9: The Native Frontier (Tauri 2.0)
+**Goal:** Cross-platform dominance.
+
+- [ ] **`system:` Block:** Direct Rust-side hardware access (Mobile/Desktop).
+- [ ] **Mobile Presets:** Automated build/deploy for iOS and Android.
+- [ ] **Universal Build:** `viand bake --native`.
 
 ---
 
