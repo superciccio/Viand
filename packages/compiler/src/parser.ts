@@ -46,24 +46,51 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
     const manifest: ComponentManifest = {
         name: "Component",
         isMemory: false,
-        imports: [], props: [], state: [], reactive: [], functions: [], onMount: [], watch: [], refs: [], styles: [], view: [], tests: [], queries: [], api: [], lang: {}, head: {}, slots: []
+        imports: [], props: [], state: [], reactive: [], functions: [], onMount: [], watch: [], refs: [], styles: [], view: [], tests: [], queries: [], api: [], sql: [], lang: {}, head: {}, slots: []
     };
 
     if (sqlSource) {
         const lines = sqlSource.split('\n');
-        let currentLabel = "";
-        let currentQuery = "";
+        let currentSql: any = null;
         lines.forEach(line => {
+            const trimmed = line.trim();
             const labelMatch = line.match(/--\s*label:\s*(\w+)/i);
+            const methodMatch = line.match(/--\s*method:\s*(\w+)/i);
+            const pathMatch = line.match(/--\s*path:\s*(.+)/i);
+            const paramsMatch = line.match(/--\s*params:\s*(.+)/i);
+
             if (labelMatch) {
-                if (currentLabel && currentQuery) manifest.queries.push({ label: currentLabel, query: currentQuery.trim() });
-                currentLabel = labelMatch[1];
-                currentQuery = "";
-            } else if (currentLabel) {
-                currentQuery += line + "\n";
+                if (currentSql) manifest.sql.push(currentSql);
+                currentSql = { label: labelMatch[1], method: 'POST', path: `/api/sql/${labelMatch[1]}`, query: "", params: {} };
+                return;
+            }
+
+            if (!currentSql) return;
+
+            if (methodMatch) {
+                currentSql.method = methodMatch[1].toUpperCase();
+            } else if (pathMatch) {
+                currentSql.path = pathMatch[1].trim();
+            } else if (paramsMatch) {
+                const parts = paramsMatch[1].split(',');
+                parts.forEach(p => {
+                    const pParts = p.split(':');
+                    if (pParts.length >= 2) {
+                        const k = pParts[0].trim();
+                        const v = pParts[1].trim();
+                        currentSql.params[k] = v;
+                    }
+                });
+            } else if (!trimmed.startsWith('--')) {
+                currentSql.query += line + "\n";
             }
         });
-        if (currentLabel && currentQuery) manifest.queries.push({ label: currentLabel, query: currentQuery.trim() });
+        if (currentSql) manifest.sql.push(currentSql);
+
+        // Backward compatibility for manifest.queries
+        manifest.sql.forEach(s => {
+            manifest.queries.push({ label: s.label, query: s.query.trim() });
+        });
     }
 
     if (apiSource) {
@@ -79,9 +106,13 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 return;
             }
             if (!currentApi) return;
-            if (trimmed.startsWith('headers:') || trimmed.startsWith('query:') || trimmed.startsWith('mock:')) {
+            if (trimmed.startsWith('headers:') || trimmed.startsWith('query:') || trimmed.startsWith('params:') || trimmed.startsWith('mock:') || trimmed.startsWith('logic:')) {
                 currentApi.lastBlock = trimmed.replace(':', '').trim();
                 if (currentApi.lastBlock === 'mock') currentApi.mock = "";
+                if (currentApi.lastBlock === 'logic') {
+                    currentApi.logic = "";
+                    currentApi.logicIndent = null;
+                }
                 return;
             }
             const indentMatch = line.match(/^(\s+)/);
@@ -90,12 +121,20 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                     currentApi.mock += trimmed + "\n";
                     return;
                 }
+                if (currentApi.lastBlock === 'logic') {
+                    if (currentApi.logicIndent === null) {
+                        currentApi.logicIndent = indentMatch[0].length;
+                    }
+                    currentApi.logic += line.slice(currentApi.logicIndent) + "\n";
+                    return;
+                }
                 const parts = trimmed.split(':');
                 if (parts.length >= 2) {
                     const key = parts[0].trim();
                     const val = parts.slice(1).join(':').trim();
-                    if (currentApi.lastBlock === 'headers') currentApi.headers[key] = val;
-                    else if (currentApi.lastBlock === 'query') currentApi.query[key] = val;
+                    if (currentApi.lastBlock === 'headers') currentApi.headers = { ...currentApi.headers, [key]: val };
+                    else if (currentApi.lastBlock === 'query') currentApi.query = { ...currentApi.query, [key]: val };
+                    else if (currentApi.lastBlock === 'params') currentApi.params = { ...currentApi.params, [key]: val };
                 }
             } else {
                 const httpMatch = trimmed.match(/^(GET|POST|PUT|DELETE|PATCH)\s+(.+)/i);

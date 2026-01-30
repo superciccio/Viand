@@ -39,6 +39,8 @@ function preflight() {
 
     if (!fs.existsSync(srcDir)) return;
     const files = fs.readdirSync(srcDir);
+    const processedSiblings = new Set();
+
     files.forEach(file => {
         if (file.endsWith('.viand')) {
             const filePath = path.join(srcDir, file);
@@ -51,11 +53,41 @@ function preflight() {
             const api = fs.existsSync(apiPath) ? fs.readFileSync(apiPath, 'utf-8') : "";
             const lang = fs.existsSync(langPath) ? fs.readFileSync(langPath, 'utf-8') : "";
 
+            if (fs.existsSync(apiPath)) processedSiblings.add(apiPath);
+            if (fs.existsSync(sqlPath)) processedSiblings.add(sqlPath);
+
             try {
-                const { reports } = processViand(code, sql, api, lang, filePath);
+                const { nitro, sql: sqlContent, reports } = processViand(code, sql, api, lang, filePath);
                 if (reports?.length) reports.forEach(r => console.warn(`⚠️ [${file}] ${r}`));
+
+                // Transpile Siblings to Nitro Handlers
+                if (api) fs.writeFileSync(`${apiPath}.ts`, nitro);
+                if (sql) fs.writeFileSync(`${sqlPath}.ts`, sqlContent);
             } catch (e) {
                 console.error(`❌ Pre-flight failed for ${file}: ${e.message}`);
+            }
+        }
+    });
+
+    // Handle standalone Siblings
+    files.forEach(file => {
+        const filePath = path.join(srcDir, file);
+        if (file.endsWith('.api') && !processedSiblings.has(filePath)) {
+            const api = fs.readFileSync(filePath, 'utf-8');
+            try {
+                const { nitro } = processViand("", "", api, "", filePath);
+                fs.writeFileSync(`${filePath}.ts`, nitro);
+            } catch (e) {
+                console.error(`❌ Pre-flight failed for standalone API ${file}: ${e.message}`);
+            }
+        }
+        if (file.endsWith('.sql') && !processedSiblings.has(filePath)) {
+            const sql = fs.readFileSync(filePath, 'utf-8');
+            try {
+                const { sql: sqlContent } = processViand("", sql, "", "", filePath);
+                fs.writeFileSync(`${filePath}.ts`, sqlContent);
+            } catch (e) {
+                console.error(`❌ Pre-flight failed for standalone SQL ${file}: ${e.message}`);
             }
         }
     });

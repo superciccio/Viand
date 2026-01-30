@@ -2,6 +2,8 @@ import { tokenize, analyzeHierarchy } from './lexer.ts';
 import { buildManifest } from './parser.ts';
 import { generateTests } from './renderers/test.ts';
 import { generateSignalsJS } from './renderers/signals.ts';
+import { generateNitroHandler } from './renderers/nitro.ts';
+import { generateSqlHandler } from './renderers/sql.ts';
 import { format } from './formatter.ts';
 import type { ComponentManifest } from './types.ts';
 
@@ -17,7 +19,7 @@ export function validateManifest(manifest: ComponentManifest, filePath: string):
 /**
  * Full compilation process.
  */
-export function processViand(code: string, sqlSource: string = "", apiSource: string = "", langSource: string = "", headSource: string = "", filePath: string = ""): { tests: string, signals: string, manifest: any, reports: string[] } {
+export function processViand(code: string, sqlSource: string = "", apiSource: string = "", langSource: string = "", headSource: string = "", filePath: string = ""): { tests: string, signals: string, nitro: string, sql: string, manifest: any, reports: string[] } {
     const { tokens, lexerErrors } = tokenize(code);
     const tree = analyzeHierarchy(tokens);
     const { manifest, reports: parserReports } = buildManifest(tree, lexerErrors, sqlSource, apiSource, langSource, headSource);
@@ -29,7 +31,9 @@ export function processViand(code: string, sqlSource: string = "", apiSource: st
         manifest,
         reports: allReports,
         tests: generateTests(manifest),
-        signals: generateSignalsJS(manifest)
+        signals: generateSignalsJS(manifest),
+        nitro: generateNitroHandler(manifest),
+        sql: generateSqlHandler(manifest)
     };
 }
 
@@ -39,5 +43,7 @@ export {
     buildManifest,
     generateTests,
     generateSignalsJS,
+    generateNitroHandler,
+    generateSqlHandler,
     format
 };

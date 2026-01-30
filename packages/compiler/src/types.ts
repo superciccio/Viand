@@ -75,8 +75,17 @@ export interface ComponentManifest {
         path: string,
         headers?: Record<string, string>,
         query?: Record<string, string>,
+        params?: Record<string, string>,
         body?: string,
-        mock?: string
+        mock?: string,
+        logic?: string
+    }[];
+    sql: {
+        label: string,
+        method: string,
+        path: string,
+        query: string,
+        params?: Record<string, string>
     }[];
     lang: Record<string, Record<string, string>>;
     head: {

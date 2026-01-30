@@ -9,16 +9,15 @@ export default defineNitroConfig({
         generateTsConfig: true
     },
     devHandlers: [
-        // We could add dev handlers here
     ],
     handlers: [
-        // Dynamic discovery of .api and .sql siblings
         ...(() => {
             const srcDir = path.resolve(process.cwd(), "src");
             if (!fs.existsSync(srcDir)) return [];
             const files = fs.readdirSync(srcDir);
-            return files.filter(f => f.endsWith('.api.ts')).map(f => {
-                const name = f.replace('.api.ts', '').toLowerCase();
+            return files.filter(f => f.endsWith('.api.ts') || f.endsWith('.sql.ts')).map(f => {
+                const isSql = f.endsWith('.sql.ts');
+                const name = isSql ? f.replace('.sql.ts', '').toLowerCase() : f.replace('.api.ts', '').toLowerCase();
                 return {
                     route: `/api/${name}`,
                     handler: `src/${f}`
