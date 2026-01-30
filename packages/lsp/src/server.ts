@@ -6,7 +6,10 @@ import {
 	ProposedFeatures,
 	InitializeParams,
 	TextDocumentSyncKind,
-	InitializeResult
+	InitializeResult,
+	CompletionItem,
+	CompletionItemKind,
+	TextDocumentPositionParams
 } from 'vscode-languageserver/node';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -50,12 +53,18 @@ connection.onHover(params => {
 	const doc = documents.get(params.textDocument.uri);
 	if (!doc) return null;
 
-	const line = doc.getText({
+	const lineText = doc.getText({
 		start: { line: params.position.line, character: 0 },
 		end: { line: params.position.line, character: Number.MAX_VALUE }
-	}).trim();
+	});
 
-	if (line.startsWith('use router')) {
+    // Detect word at position
+    const offset = params.position.character;
+    const leftMatch = lineText.slice(0, offset).match(/[a-zA-Z0-9_$]+$/);
+    const rightMatch = lineText.slice(offset).match(/^[a-zA-Z0-9_$]+/);
+    const word = (leftMatch ? leftMatch[0] : '') + (rightMatch ? rightMatch[0] : '');
+
+	if (word === 'router') {
 		return {
 			contents: {
 				kind: 'markdown',
@@ -63,7 +72,7 @@ connection.onHover(params => {
 			}
 		};
 	}
-    if (line.startsWith('sync ')) {
+    if (word === 'sync') {
 		return {
 			contents: {
 				kind: 'markdown',
@@ -71,7 +80,7 @@ connection.onHover(params => {
 			}
 		};
 	}
-    if (line.startsWith('component ')) {
+    if (word === 'component') {
 		return {
 			contents: {
 				kind: 'markdown',
@@ -79,8 +88,66 @@ connection.onHover(params => {
 			}
 		};
 	}
+    if (word === 'memory') {
+		return {
+			contents: {
+				kind: 'markdown',
+				value: '🧠 **Viand Memory**\nDefines a shared, reactive global state singleton.'
+			}
+		};
+	}
 
 	return null;
+});
+
+// Intellisense: Completion Provider
+connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
+	return [
+		{
+			label: 'component',
+			kind: CompletionItemKind.Keyword,
+			detail: 'Define a component'
+		},
+		{
+			label: 'view:',
+			kind: CompletionItemKind.Keyword,
+			detail: 'Start view block'
+		},
+		{
+			label: 'sync',
+			kind: CompletionItemKind.Keyword,
+			detail: 'Synchronize reactive state'
+		},
+		{
+			label: 'fn',
+			kind: CompletionItemKind.Keyword,
+			detail: 'Define a function'
+		},
+		{
+			label: 'on mount:',
+			kind: CompletionItemKind.Keyword,
+			detail: 'Component lifecycle'
+		},
+		{
+			label: 'on change',
+			kind: CompletionItemKind.Keyword,
+			detail: 'Reactive watcher'
+		},
+		{
+			label: 'use router',
+			kind: CompletionItemKind.Keyword,
+			detail: 'Import global router'
+		}
+	];
+});
+
+connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
+	if (item.label === 'sync') {
+		item.documentation = 'Automatically fetches and updates state from an async source.';
+	} else if (item.label === 'on change') {
+		item.documentation = 'Executes a block of code whenever a reactive variable changes.';
+	}
+	return item;
 });
 
 // The content of a text document has changed. This event is emitted
