@@ -1,25 +1,20 @@
+use router
+
 component Shell:
     view:
-        nav:
-            a(href: "#/"): "Home"
-            a(href: "#/about"): "About"
-            a(href: "#/missing"): "Test 404"
+        nav .flex .gap-6 .p-6 .bg-slate-100 .border-b .border-slate-200:
+            a(href: '/', class:active: router.path == '/', class: 'hover:text-blue-600 transition-colors'): "Home"
+            a(href: '/about', class:active: router.path == '/about', class: 'hover:text-blue-600 transition-colors'): "About"
+            a(href: '/404', class:active: router.path == '/404', class: 'hover:text-blue-600 transition-colors'): "Test 404"
         
-        main:
+        main .max-w-4xl .mx-auto .py-12 .px-6:
             slot:
         
-        footer:
-            p: "Powered by Viand SPA"
+        footer .mt-12 .py-8 .text-center .text-slate-500 .border-t .border-slate-100:
+            p: "Powered by Viand + Tailwind CSS"
 
     style:
-        nav:
-            display: flex
-            gap: 20px
-            padding: 20px
-            background: #eef
-        main:
-            padding: 40px
-        footer:
-            border-top: 1px solid #ccc
-            padding: 20px
-            text-align: center
+        .active:
+            color: #3b82f6
+            font-weight: bold
+            text-decoration: underline

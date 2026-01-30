@@ -3,8 +3,8 @@ use router
 component Shell:
     view:
         nav:
-            a(href: "/", class:active: router.path == "/"): "Home"
-            a(href: "/about/", class:active: router.path == "/about"): "About"
+            a(href: '/', class:active: router.path == '/'): "Home"
+            a(href: '/about/', class:active: router.path == '/about'): "About"
         
         main:
             slot:

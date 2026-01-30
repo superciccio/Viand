@@ -5,4 +5,4 @@ component NotFound:
         Shell:
             h1: "404 - Lost in the Indentation"
             p: "The page you are looking for doesn't exist."
-            a(href: "#/"): "Back to Safety"
+            a(href: '/'): "Back to Safety"

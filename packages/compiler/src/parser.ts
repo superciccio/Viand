@@ -54,8 +54,8 @@ export function findSplitColon(text: string): number {
         if (inQuote) { if (char === quoteChar) inQuote = false; } 
         else {
             if (char === '"' || char === "'") { inQuote = true; quoteChar = char; }
-            else if (char === '(') depth++;
-            else if (char === ')') depth--;
+            else if (char === '(' || char === '{' || char === '[') depth++;
+            else if (char === ')' || char === '}' || char === ']') depth--;
             else if (char === ':' && depth === 0) return i;
         }
     }
@@ -280,9 +280,13 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             let tagSide = tagPart;
             let eventSide = "";
             if (tagPart.includes('->')) {
-                const p = tagPart.split('->');
-                tagSide = p[0].trim();
-                eventSide = p[1].trim();
+                // If it has attributes, the arrow must be AFTER the closing paren
+                const lastParen = tagPart.lastIndexOf(')');
+                const arrowIdx = tagPart.indexOf('->', lastParen);
+                if (arrowIdx !== -1) {
+                    tagSide = tagPart.slice(0, arrowIdx).trim();
+                    eventSide = tagPart.slice(arrowIdx + 2).trim();
+                }
             }
             const sp = tagSide.indexOf('(');
             const ep = tagSide.lastIndexOf(')');

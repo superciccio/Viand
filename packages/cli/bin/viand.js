@@ -129,6 +129,8 @@ else if (command === 'bake') {
 
             const entryPath = path.join(entryDir, 'index.html');
             const relativeSrc = path.relative(path.dirname(entryPath), path.join(srcDir, file));
+            const hasCss = fs.existsSync(path.join(srcDir, 'app.css'));
+            const cssImport = hasCss ? `import './${path.relative(path.dirname(entryPath), path.join(srcDir, 'app.css'))}';` : '';
             
             const entryHtml = `
 <!DOCTYPE html>
@@ -141,6 +143,7 @@ else if (command === 'bake') {
   <body>
     <div id="app"></div>
     <script type="module">
+      ${cssImport}
       import { mount } from 'svelte';
       import App from './${relativeSrc}';
       mount(App, { target: document.getElementById('app') });
@@ -215,6 +218,113 @@ else if (command === 'serve') {
     });
     preview.on('close', (code) => process.exit(code || 0));
 }
+else if (command === 'verify') {
+    console.log(`🕵️  Verifying project health in ${projectRoot}...`);
+    preflight(); // Ensure logic files are generated
+
+    // Find entry point
+    const possibleEntries = ['App.viand', 'Home.viand', 'index.viand'];
+    const entryFile = fs.readdirSync(srcDir).find(f => possibleEntries.includes(f));
+
+    if (!entryFile) {
+        console.error("❌ No obvious entry point found (App.viand, Home.viand). Cannot smoke test.");
+        process.exit(1);
+    }
+
+    const testPath = path.join(projectRoot, 'viand-smoke.test.ts');
+    const testContent = `
+import { describe, it, expect } from 'vitest';
+import { render } from '@testing-library/svelte';
+import Entry from './src/${entryFile}';
+
+describe('Smoke Test', () => {
+  it('mounts ${entryFile} without crashing', () => {
+    const { container } = render(Entry);
+    expect(container.innerHTML).toBeTruthy();
+    // Check for common error indicators if needed
+    expect(container.innerHTML).not.toContain('Undefined');
+  });
+});`;
+
+    fs.writeFileSync(testPath, testContent);
+
+    console.log(`🧪 Running smoke test on ${entryFile}...`);
+    
+    // We need to run vitest on this specific file
+    const test = spawn('npx', ['vitest', 'run', 'viand-smoke.test.ts'], {
+        cwd: projectRoot,
+        stdio: 'inherit',
+        shell: true
+    });
+
+    test.on('close', (code) => {
+        if (fs.existsSync(testPath)) fs.unlinkSync(testPath);
+        
+        if (code === 0) {
+            console.log("✅ Project is ALIVE. Smoke test passed.");
+        } else {
+            console.error("❌ Project is DEAD. Smoke test failed.");
+        }
+        process.exit(code || 0);
+    });
+}
+else if (command === 'add') {
+    const plugin = args[2]; // Fixed: args[1] is targetDir, args[2] is plugin
+    if (plugin === 'tailwind') {
+        console.log(`🎨 Adding Tailwind CSS to ${projectRoot}...`);
+        
+        // 1. Install dependencies
+        const install = spawn('npm', ['install', '-D', 'tailwindcss', '@tailwindcss/postcss', 'postcss', 'autoprefixer'], {
+            cwd: projectRoot,
+            stdio: 'inherit',
+            shell: true
+        });
+
+        install.on('close', (code) => {
+            if (code !== 0) {
+                console.error("❌ Failed to install Tailwind dependencies.");
+                process.exit(1);
+            }
+
+            // 2. Initialize Tailwind
+            fs.writeFileSync(path.join(projectRoot, 'tailwind.config.js'), `
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{svelte,js,ts,viand}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+`);
+
+            fs.writeFileSync(path.join(projectRoot, 'postcss.config.js'), `
+export default {
+  plugins: {
+    '@tailwindcss/postcss': {},
+    autoprefixer: {},
+  },
+}
+`);
+
+            // 3. Create base CSS
+            fs.writeFileSync(path.join(projectRoot, 'src/app.css'), `
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+`);
+
+            console.log(`✅ Tailwind CSS installed and configured.`);
+            console.log(`👉 Next step: Add 'import "./app.css"' to your entry Viand or TS file.`);
+            process.exit(0);
+        });
+    } else {
+        console.log("Unknown plugin. Supported: tailwind");
+    }
+}
 else {
-    console.log("Usage: viand [dev|bake|serve] [directory]");
+    console.log("Usage: viand [dev|bake|serve|verify|add] [directory] [plugin]");
 }
