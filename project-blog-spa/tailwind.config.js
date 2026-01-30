@@ -4,7 +4,7 @@ export default {
   content: {
     files: [
       "./index.html",
-      "./src/**/*.{svelte,js,ts,viand}",
+      "./src/**/*.{js,ts,viand}",
     ],
     transform: {
       viand: (content) => {

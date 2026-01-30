@@ -44,6 +44,10 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
         imports: [],
         props: [],
         refs: manifest.refs || [],
+        apiBridge: [],
+        sqlBridge: [],
+        apiMocks: {},
+        sqlMocks: {},
         onMount: [],
         watchers: [],
         signals: [],
@@ -74,6 +78,15 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
 
     // 1.8 Map Lang
     output.lang = manifest.lang;
+
+    // 1.9 Map Bridges
+    output.apiBridge = manifest.api.map(a => a.label);
+    output.sqlBridge = manifest.queries.map(q => q.label);
+
+    // 1.10 Map Mocks
+    manifest.api.forEach(a => {
+        if (a.mock) output.apiMocks[a.label] = a.mock.trim();
+    });
 
     // 2. Map State to Signals
     manifest.state.forEach(s => {

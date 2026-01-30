@@ -12,6 +12,7 @@ function createIntl() {
   return {
     get locale() { return _locale.value; },
     set locale(v) { _locale.value = v; },
+    get localeSignal() { return _locale; },
 
     load(data: Record<string, Record<string, string>>) {
       _dict.value = { ..._dict.value, ...data };

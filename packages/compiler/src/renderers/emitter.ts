@@ -5,7 +5,7 @@ import { ComponentOutput, ViandWidget } from './schema.ts';
  * Converts a validated Widget Tree into pure, reactive JavaScript.
  */
 export function emitJS(output: ComponentOutput): string {
-    let code = `import { signal, effect, computed, h, renderList, renderMatch, api } from "@viand/runtime";\n`;
+    let code = `import { signal, effect, computed, h, renderList, renderMatch } from "@viand/runtime";\n`;
 
     output.imports.forEach(i => {
         code += `import { ${i.name} } from "${i.path}";\n`;
@@ -23,6 +23,18 @@ export function emitJS(output: ComponentOutput): string {
         code += `intl.load(${JSON.stringify(output.lang, null, 2)});\n\n`;
     }
 
+    // 0.3 Register Mocks
+    if (Object.keys(output.apiMocks).length > 0 || Object.keys(output.sqlMocks).length > 0) {
+        code += `if (typeof window !== 'undefined' && window.viand) {\n`;
+        Object.entries(output.apiMocks).forEach(([label, data]) => {
+            code += `  window.viand.registerMock("api", "${label}", ${data});\n`;
+        });
+        Object.entries(output.sqlMocks).forEach(([label, data]) => {
+            code += `  window.viand.registerMock("sql", "${label}", ${data});\n`;
+        });
+        code += `}\n\n`;
+    }
+
     code += `export function ${output.name}(__props = {}) {\n`;
 
     // 0. Initialize Props
@@ -35,7 +47,34 @@ export function emitJS(output: ComponentOutput): string {
         code += `  const ${r} = signal(null);\n`;
     });
 
+    // 0.2 Initialize Bridges (API & SQL)
+    if (output.apiBridge.length > 0) {
+        code += `  const api = {\n`;
+        output.apiBridge.forEach(label => {
+            code += `    ${label}: (...args) => viand.bridge.api("${label}", ...args),\n`;
+        });
+        code += `  };\n`;
+    }
+
+    if (output.sqlBridge.length > 0) {
+        code += `  const sql = {\n`;
+        output.sqlBridge.forEach(label => {
+            // Note: Tauri SQL bridge will eventually replace this for native builds
+            code += `    ${label}: (...args) => viand.bridge.sql("${label}", ...args),\n`;
+        });
+        code += `  };\n`;
+    }
+
     // 1. Emit Signals
+    output.signals.forEach(s => {
+        if (s.isDerived) {
+            code += `  const ${s.id} = computed(() => ${s.value});\n`;
+        } else {
+            code += `  const ${s.id} = signal(${s.value});\n`;
+        }
+    });
+
+    // 2. Emit Actions
     output.actions.forEach(a => {
         code += `  const ${a.name} = (${a.params.join(', ')}) => {\n`;
         a.body.forEach(line => code += `    ${line}\n`);

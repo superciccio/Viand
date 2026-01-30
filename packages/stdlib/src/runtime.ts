@@ -140,13 +140,6 @@ export function mount(target: HTMLElement, component: () => HTMLElement) {
   target.appendChild(component());
 }
 
-export const api = {
-  getAnalytics: () => ({
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-    data: [12, 19, 3, 5, 2]
-  })
-};
-
 if (typeof window !== 'undefined') {
   (window as any).viand = {
     inspect: (el: any) => {
@@ -155,6 +148,39 @@ if (typeof window !== 'undefined') {
         return el.__viand;
       }
       console.warn("⚠️ No Viand metadata found on this element.");
+    },
+    // The Sibling Bridge
+    bridge: {
+        mocks: {
+            api: {} as Record<string, any>,
+            sql: {} as Record<string, any>
+        },
+        drivers: {
+            api: (label: string, ...args: any[]) => {
+                const mock = (window as any).viand.bridge.mocks.api[label];
+                if (typeof mock !== 'undefined') return mock;
+                console.warn(`[Viand Bridge] No API driver or mock set for: ${label}`, args);
+                return null;
+            },
+            sql: (label: string, ...args: any[]) => {
+                const mock = (window as any).viand.bridge.mocks.sql[label];
+                if (typeof mock !== 'undefined') return mock;
+                console.warn(`[Viand Bridge] No SQL driver or mock set for: ${label}`, args);
+                return [];
+            }
+        },
+        api(label: string, ...args: any[]) { return this.drivers.api(label, ...args); },
+        sql(label: string, ...args: any[]) { return this.drivers.sql(label, ...args); }
+    },
+    registerMock(type: 'api' | 'sql', label: string, data: any) {
+        this.bridge.mocks[type][label] = data;
+    },
+    use(drivers: { api?: Function, sql?: Function }) {
+        if (drivers.api) this.bridge.drivers.api = drivers.api as any;
+        if (drivers.sql) this.bridge.drivers.sql = drivers.sql as any;
     }
   };
 }
+
+// For compiler compatibility
+export const api = (typeof window !== 'undefined') ? (window as any).viand.bridge : null;

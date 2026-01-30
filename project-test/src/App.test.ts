@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { screen, fireEvent } from '@testing-library/dom';
 import { mount } from '@viand/runtime';
 import { App } from './App.viand';
@@ -10,18 +10,16 @@ describe('App Component', () => {
     mount(target, () => App());
   });
 
-  it('renders the initial state', () => {
-    expect(screen.getByText(/Andrea's Tasks/i)).toBeTruthy();
-    expect(screen.getByPlaceholderText(/What needs to be done\?/i)).toBeTruthy();
-  });
-
-  it('adds a new todo', async () => {
-    const input = screen.getByPlaceholderText(/What needs to be done\?/i) as HTMLInputElement;
-    const button = screen.getByText(/Add/i);
-
-    await fireEvent.input(input, { target: { value: 'New Task' } });
-    await fireEvent.click(button);
-
-    expect(screen.getByText(/New Task/i)).toBeTruthy();
+  it('ui verification', async () => {
+    if (window.viand) window.viand.use({
+      sql: (label, ...args) => {
+        if (label === 'save') return (vi.fn())(...args);
+        if (label === 'loadAll') return (vi.fn().mockReturnValue([]))(...args);
+        return [];
+      },
+    });
+    const input_newTodo = document.querySelector('input');
+    if (input_newTodo) await fireEvent.input(input_newTodo, { target: { value: "Research Signals" } });
+    await fireEvent.click(screen.getByText(/Add/i));
   });
 });

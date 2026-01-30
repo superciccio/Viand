@@ -8,10 +8,15 @@ component App:
 
     fn addTodo():
         if ($newTodo.trim()) {
-            # sql.save($newTodo)
+            # Calling the SQL sibling!
+            sql.save($newTodo)
+            
             $todos = [...$todos, { text: $newTodo, done: false }]
             $newTodo = ""
         }
+
+    fn loadData():
+        $todos = sql.loadAll()
 
     view:
         div .container:
@@ -40,3 +45,18 @@ component App:
         input:
             flex: 1
             padding: 8px
+
+test App:
+    @ui:
+        # Mocking the SQL bridge the Viand way
+        set sql.save = vi.fn()
+        set sql.loadAll = vi.fn().mockReturnValue([])
+
+        must find "h1" with text "Andrea's Tasks"
+        
+        # Act
+        set $newTodo = "Research Signals"
+        click "button" with text "Add"
+        
+        must find "span" with text "Research Signals"
+        must sql.save called with "Research Signals"

@@ -1,39 +1,52 @@
 /**
- * 🌍 Viand Standard Intl Interface
- * Reactive internationalization using Signals.
+ * 🛣️ Viand Isomorphic Router
+ * Handles SPA navigation using Signals for total stability.
  */
 
 import { signal } from "@viand/runtime";
 
-function createIntl() {
-  const _locale = signal('en');
-  const _dict = signal<Record<string, Record<string, string>>>({});
+const isBrowser = typeof window !== 'undefined';
+
+function createRouter() {
+  const _url = signal(isBrowser ? window.location.pathname : '/');
+
+  function normalize(p: string) {
+    if (p === '/') return p;
+    return p.endsWith('/') ? p.slice(0, -1) : p;
+  }
+
+  // Initial normalization
+  _url.value = normalize(_url.value);
 
   return {
-    get locale() { return _locale.value; },
-    set locale(v) { _locale.value = v; },
-    get localeSignal() { return _locale; },
-
-    load(data: Record<string, Record<string, string>>) {
-      _dict.value = { ..._dict.value, ...data };
+    get path() {
+      return _url.value;
     },
 
-    t(key: string) {
-      const dict = _dict.value;
-      const entry = dict[key];
-      if (!entry) return key;
-      return entry[_locale.value] || entry['en'] || key;
+    goto(newPath: string) {
+      const p = normalize(newPath);
+      _url.value = p;
+      if (isBrowser && window.location.pathname !== p) {
+        window.history.pushState({}, '', p);
+      }
     },
 
-    date(val: string | Date, options = {}) {
-      const d = typeof val === 'string' ? new Date(val) : val;
-      return new Intl.DateTimeFormat(_locale.value, options).format(d);
-    },
-
-    currency(val: number, currency = 'USD') {
-      return new Intl.NumberFormat(_locale.value, { style: 'currency', currency }).format(val);
+    enableSPA() {
+      if (!isBrowser) return;
+      window.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const link = target.closest('a');
+        if (link && link.href && link.origin === window.location.origin) {
+          e.preventDefault();
+          this.goto(link.pathname);
+        }
+      });
+      
+      window.addEventListener('popstate', () => {
+          _url.value = normalize(window.location.pathname);
+      });
     }
   };
 }
 
-export const intl = createIntl();
+export const router = createRouter();

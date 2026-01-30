@@ -30,6 +30,10 @@ export interface ComponentOutput {
     css?: string;
     lang?: Record<string, Record<string, string>>;
     refs: string[];
+    apiBridge: string[];
+    sqlBridge: string[];
+    apiMocks: Record<string, string>;
+    sqlMocks: Record<string, string>;
     onMount: string[];
     watchers: { dependency: string; body: string[] }[];
     signals: SignalSchema[];
