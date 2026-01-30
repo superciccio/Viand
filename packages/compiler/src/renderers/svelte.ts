@@ -165,7 +165,9 @@ ${children}${indent}</${tag}>
         return "";
     };
 
-    let view = manifest.view.map(n => renderNode(nodeToSnippet(n), "")).join('');
+    // Clone view to avoid mutating the shared manifest
+    const viewCopy: ViewNode[] = JSON.parse(JSON.stringify(manifest.view));
+    let view = viewCopy.map(n => renderNode(nodeToSnippet(n), "")).join('');
     let css = "";
     if (manifest.styles.length > 0) {
         css = `\n<style>\n${manifest.styles.map(s => `  ${s.selector} {\n${s.rules.map(r => `    ${r};`).join('\n')}\n  }`).join('\n')}\n</style>`;

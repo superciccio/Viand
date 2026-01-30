@@ -8,9 +8,9 @@
   <body>
     <div id="app"></div>
     <script type="module">
-      import { mount } from "svelte";
-      import Home from "./src/Home.viand";
-      import About from "./src/About.viand";
+      import { mount } from "@viand/runtime";
+      import { Home } from "./src/Home.viand";
+      import { About } from "./src/About.viand";
 
       const path = window.location.pathname.toLowerCase().replace(/\/$/, "");
       console.log("🌿 Viand Router DEBUG: Normalized Path is [" + (path || "/") + "]");
@@ -22,9 +22,7 @@
 
       console.log("🌿 Viand Router DEBUG: Mounting", path.includes("about") ? "About" : "Home");
 
-      mount(Entry, {
-        target: document.getElementById("app"),
-      });
+      mount(document.getElementById("app"), () => Entry());
     </script>
   </body>
 </html>

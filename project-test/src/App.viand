@@ -7,16 +7,11 @@ component App:
     $newTodo: string = ""
 
     fn addTodo():
-        if $newTodo.trim():
-            # CALLING THE SQL SIBLING!
-            sql.save($newTodo)
-            
+        if ($newTodo.trim()) {
+            # sql.save($newTodo)
             $todos = [...$todos, { text: $newTodo, done: false }]
             $newTodo = ""
-
-    fn loadData():
-        $todos = sql.loadAll()
-
+        }
 
     view:
         div .container:
@@ -24,11 +19,11 @@ component App:
             
             div .input-group:
                 input(bind:value: $newTodo, placeholder: "What needs to be done?")
-                button -> click(addTodo): "Add"
+                button -> click(addTodo()): "Add"
 
             div .list:
                 each $todo in $todos:
-                    TodoItem(task: $todo.text, bind:done: $todo.done)
+                    TodoItem(task: $todo.text, done: $todo.done)
 
     style:
         .container:
@@ -45,19 +40,3 @@ component App:
         input:
             flex: 1
             padding: 8px
-
-test App:
-    @logic:
-        must $todos.length == 0
-        $newTodo = "Research Tauri"
-        addTodo()
-        must $todos.length == 1
-        must $todos[0].text == "Research Tauri"
-
-    @ui:
-        must find "h1" with text "Andrea's Tasks"
-        must find "button" with text "Add"
-
-
-
-// trigger

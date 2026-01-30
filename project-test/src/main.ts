@@ -1,8 +1,5 @@
-import { mount } from 'svelte'
-import App from './App.viand'
+import { mount } from '@viand/runtime'
+import { App } from './App.viand'
 
-const app = mount(App, {
-  target: document.getElementById('app')!,
-})
-
-export default app
+const target = document.getElementById('app')!;
+mount(target, () => App());

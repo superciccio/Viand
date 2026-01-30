@@ -1,17 +1,12 @@
 import { defineConfig } from 'vite'
-import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte'
-import viand from '../packages/vite-plugin-viand/index.js'
+import viand from '../packages/vite-plugin-viand/index.ts'
 
 export default defineConfig({
   resolve: {
     conditions: ['browser', 'development']
   },
   plugins: [
-    viand(),
-    svelte({
-      preprocess: vitePreprocess(),
-      extensions: ['.svelte', '.viand', '.svelte.ts', '.svelte.js']
-    })
+    viand()
   ],
   test: {
     environment: 'jsdom',

@@ -185,7 +185,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
 
         // 2. Logic Definitions
         if (token.type === 'PROP_DECLARATION') {
-            const m = trimmed.match(/@prop\s+"?([a-z_]\w*)/i);
+            const m = trimmed.match(/@prop\s+"?\$?([a-z_]\w*)/i);
             if (m) {
                 const id = m[1];
                 let type = 'any', value = 'undefined';
@@ -293,7 +293,13 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 const c = { condition, children: [] };
                 context.node.cases!.push(c);
                 stack.push({ type: 'view-node', children: c.children, depth: token.depth });
-                if (inline) c.children.push({ type: 'text', content: inline, children: [], line: token.line });
+                if (inline) {
+                    if (/^[A-Z]\w*$/.test(inline)) {
+                        c.children.push({ type: 'element', tag: inline, attrs: {}, children: [], line: token.line });
+                    } else {
+                        c.children.push({ type: 'text', content: inline, children: [], line: token.line });
+                    }
+                }
             } else if (trimmed.startsWith('default') && context.type === 'match-root') {
                 const splitIdx = findSplitColon(trimmed);
                 let inline = "";
@@ -301,7 +307,13 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 const defaultNode = { children: [] };
                 context.node.defaultCase = defaultNode;
                 stack.push({ type: 'view-node', children: defaultNode.children, depth: token.depth });
-                if (inline) defaultNode.children.push({ type: 'text', content: inline, children: [], line: token.line });
+                if (inline) {
+                    if (/^[A-Z]\w*$/.test(inline)) {
+                        defaultNode.children.push({ type: 'element', tag: inline, attrs: {}, children: [], line: token.line });
+                    } else {
+                        defaultNode.children.push({ type: 'text', content: inline, children: [], line: token.line });
+                    }
+                }
             } else if (trimmed.startsWith('if ')) {
                 const node: ViewNode = { type: 'if', condition: trimmed.replace('if ', '').replace(':', '').trim(), children: [], line: token.line };
                 context.children.push(node);
@@ -389,7 +401,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 refName = parts[1].trim();
                 if (!manifest.refs.includes(refName)) manifest.refs.push(refName);
             }
-            if (tagParts.length > 1) attrs['class'] = tagParts.slice(1).join(' ').trim();
+            if (tagParts.length > 1) attrs['class'] = `"${tagParts.slice(1).join(' ').trim()}"`;
             if (eventSide) {
                 const m = eventSide.match(/^([a-z0-9_.]+)\s*\((.*?)\)$/i);
                 if (m) {

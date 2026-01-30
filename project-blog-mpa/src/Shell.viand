@@ -10,7 +10,7 @@ component Shell:
             
             div .flex .items-center .gap-4:
                 # Language Dropdown
-                select(bind:value: intl.locale, class: 'px-2 py-1 border rounded bg-white text-sm'):
+                select(bind:value: intl.localeSignal, class: 'px-2 py-1 border rounded bg-white text-sm'):
                     option(value: 'en'): "English"
                     option(value: 'it'): "Italiano"
         

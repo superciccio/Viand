@@ -3,7 +3,7 @@ import { processViand } from '../compiler/src/index.ts';
 
 /**
  * 👻 Viand Ghost-Mode Plugin
- * Transforms .viand files into Atomic Svelte components in RAM.
+ * Transforms .viand files into Reactive Signals in RAM.
  */
 export default function viand() {
   return {
@@ -24,7 +24,7 @@ export default function viand() {
         const lang = fs.existsSync(langPath) ? fs.readFileSync(langPath, 'utf-8') : "";
 
         // 2. Atomic Transformation
-        const { svelte, reports } = processViand(src, sql, api, lang, id);
+        const { signals, reports } = processViand(src, sql, api, lang, id);
 
         // 3. Health Gauge (Reporting)
         if (reports?.length) {
@@ -32,7 +32,7 @@ export default function viand() {
         }
 
         return {
-          code: svelte,
+          code: signals,
           map: null
         };
       } catch (e) {

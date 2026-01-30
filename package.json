@@ -5,7 +5,10 @@
   "description": "The Viand Programming Language ecosystem",
   "workspaces": [
     "packages/*",
-    "editors/*"
+    "editors/*",
+    "project-test",
+    "project-blog-spa",
+    "project-blog-mpa"
   ],
   "scripts": {
     "dev": "node packages/cli/bin/viand.js dev",
@@ -23,6 +26,7 @@
     "acorn": "^8.15.0",
     "astring": "^1.9.0",
     "estree-walker": "^3.0.3",
-    "magic-string": "^0.30.21"
+    "magic-string": "^0.30.21",
+    "zod": "^4.3.6"
   }
 }

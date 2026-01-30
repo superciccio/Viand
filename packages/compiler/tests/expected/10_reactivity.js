@@ -1,18 +1,20 @@
 import { signal, effect, computed, h, renderList } from "./runtime";
 
-export function App(__props = {}) {
-  console.log("Viand Widget Tree for Counter:", {
-  "type": "fragment",
+export function ReactiveTest(__props = {}) {
+  console.log("Viand Widget Tree for ReactiveTest:", {
+  "type": "element",
+  "tag": "div",
+  "props": {},
   "children": [
     {
       "type": "element",
-      "tag": "h1",
+      "tag": "p",
       "props": {},
       "children": [
         {
           "type": "text",
-          "value": "Viand Signals Foundry",
-          "isReactive": false
+          "value": "Count: ${ count.value }",
+          "isReactive": true
         }
       ]
     },
@@ -23,7 +25,7 @@ export function App(__props = {}) {
       "children": [
         {
           "type": "text",
-          "value": "The count is ${ count.value }",
+          "value": "Double: ${ double.value }",
           "isReactive": true
         }
       ]
@@ -32,12 +34,12 @@ export function App(__props = {}) {
       "type": "element",
       "tag": "button",
       "props": {
-        "onclick": "add"
+        "onclick": "increment"
       },
       "children": [
         {
           "type": "text",
-          "value": "Add One",
+          "value": "Inc",
           "isReactive": false
         }
       ]
@@ -45,9 +47,6 @@ export function App(__props = {}) {
   ]
 });
   const count = signal(0);
-  const add = () => {
-    count.value += 1;
-  };
 
-  return h("div", { class: "fragment" }, [h("h1", {  }, ["Viand Signals Foundry"]), h("p", {  }, [computed(() => `The count is ${ count.value }`)]), h("button", { onclick: add }, ["Add One"])]);
+  return h("div", {  }, [h("p", {  }, [computed(() => `Count: ${ count.value }`)]), h("p", {  }, [computed(() => `Double: ${ double.value }`)]), h("button", { onclick: increment }, ["Inc"])]);
 }

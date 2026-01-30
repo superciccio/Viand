@@ -1,36 +1,31 @@
 /**
  * 🛣️ Viand Isomorphic Router
- * Handles SPA navigation using Svelte Stores for total stability.
+ * Handles SPA navigation using Signals for total stability.
  */
 
-import { writable, get } from "svelte/store";
+import { signal } from "@viand/runtime";
 
 const isBrowser = typeof window !== 'undefined';
 
 function createRouter() {
-  const _url = writable(isBrowser ? window.location.pathname : '/');
+  const _url = signal(isBrowser ? window.location.pathname : '/');
 
-  function normalize(p) {
+  function normalize(p: string) {
     if (p === '/') return p;
     return p.endsWith('/') ? p.slice(0, -1) : p;
   }
 
   // Initial normalization
-  _url.update(p => normalize(p));
+  _url.value = normalize(_url.value);
 
   return {
-    // Svelte 5 handles store access via $router.path if we export the store,
-    // but for our logic bridge we use a getter.
     get path() {
-      return get(_url);
+      return _url.value;
     },
 
-    // To make it reactive in Svelte 5 templates easily:
-    subscribe: _url.subscribe,
-
-    goto(newPath) {
+    goto(newPath: string) {
       const p = normalize(newPath);
-      _url.set(p);
+      _url.value = p;
       if (isBrowser && window.location.pathname !== p) {
         window.history.pushState({}, '', p);
       }
@@ -39,12 +34,16 @@ function createRouter() {
     enableSPA() {
       if (!isBrowser) return;
       window.addEventListener('click', (e) => {
-        const target = e.target;
+        const target = e.target as HTMLElement;
         const link = target.closest('a');
         if (link && link.href && link.origin === window.location.origin) {
           e.preventDefault();
           this.goto(link.pathname);
         }
+      });
+      
+      window.addEventListener('popstate', () => {
+          _url.value = normalize(window.location.pathname);
       });
     }
   };
