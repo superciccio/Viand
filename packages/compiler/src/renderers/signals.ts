@@ -1,5 +1,6 @@
-import { ComponentManifest, ViewNode } from '../types.ts';
-import { ComponentOutput, ViandWidget, validateOutput } from './schema.ts';
+import type { ComponentManifest, ViewNode, ManifestFunction } from '../types.ts';
+import { validateOutput } from './schema.ts';
+import type { ComponentOutput, ViandWidget } from './schema.ts';
 import { emitJS } from './emitter.ts';
 
 /**
@@ -7,11 +8,11 @@ import { emitJS } from './emitter.ts';
  * Builds a validated Instruction Tree (Widget Tree) from the Manifest.
  */
 export function generateSignalsJS(manifest: ComponentManifest): string {
-    
+
     // 0. Memory Module Handling
     if (manifest.isMemory) {
         let code = `import { signal, effect, computed } from "@viand/runtime";\n\n`;
-        
+
         // Map Imports
         manifest.imports.forEach(i => {
             let path = i.path;
@@ -22,19 +23,19 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
         });
 
         code += `\n`;
-        
+
         // State signals
         manifest.state.forEach(s => {
-             code += `const _${s.id} = signal(${s.value});\n`;
+            code += `const _${s.id} = signal(${s.value});\n`;
         });
-        
+
         code += `\nexport const ${manifest.name} = {\n`;
         manifest.state.forEach(s => {
-             code += `  get ${s.id}() { return _${s.id}.value; },\n`;
-             code += `  set ${s.id}(v) { _${s.id}.value = v; },\n`;
+            code += `  get ${s.id}() { return _${s.id}.value; },\n`;
+            code += `  set ${s.id}(v) { _${s.id}.value = v; },\n`;
         });
         code += `};\n`;
-        
+
         return code;
     }
 
@@ -79,7 +80,10 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
     // 1.8 Map Lang
     output.lang = manifest.lang;
 
-    // 1.9 Map Bridges
+    // 1.9 Map Head
+    output.head = manifest.head;
+
+    // 1.10 Map Bridges
     output.apiBridge = manifest.api.map(a => a.label);
     output.sqlBridge = manifest.queries.map(q => q.label);
 
@@ -100,7 +104,7 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
     });
 
     // 3. Map Functions to Actions
-    const processLogic = (lines: any[]): string[] => {
+    const processLogic = (lines: (string | ManifestFunction)[]): string[] => {
         const output: string[] = [];
         lines.forEach(line => {
             if (typeof line === 'string') {
@@ -112,33 +116,40 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
 
                 output.push(code);
             } else if (line.type === 'js-block') {
-                const header = line.body[0];
-                let cleanHeader = header.replace(/:$/, '');
-                // Handle '_.ref' in block header
-                cleanHeader = cleanHeader.replace(/_\.([a-zA-Z0-9_]+)/g, '$1.value');
-                cleanHeader = cleanHeader.replace(/\$([a-zA-Z0-9_]+)/g, '$1.value');
-                
-                // Ensure parens for control flow
-                const flowMatch = cleanHeader.match(/^(if|else if|while)\s+(.*)$/);
-                if (flowMatch) {
-                    const keyword = flowMatch[1];
-                    const condition = flowMatch[2];
-                    if (!condition.startsWith('(')) {
-                        cleanHeader = `${keyword} (${condition})`;
-                    }
-                }
+                const header = line.body ? line.body[0] : "";
+                let cleanHeader = typeof header === 'string' ? header.replace(/:$/, '') : "";
 
-                output.push(`${cleanHeader} {`);
-                output.push(...processLogic(line.body.slice(1)));
-                output.push(`}`);
+                if (cleanHeader) {
+                    // Handle '_.ref' in block header
+                    cleanHeader = cleanHeader.replace(/_\.([a-zA-Z0-9_]+)/g, '$1.value');
+                    cleanHeader = cleanHeader.replace(/\$([a-zA-Z0-9_]+)/g, '$1.value');
+
+                    // Ensure parens for control flow
+                    const flowMatch = cleanHeader.match(/^(if|else if|while)\s+(.*)$/);
+                    if (flowMatch) {
+                        const keyword = flowMatch[1];
+                        const condition = flowMatch[2];
+                        if (!condition.startsWith('(')) {
+                            cleanHeader = `${keyword} (${condition})`;
+                        }
+                    }
+
+                    output.push(`${cleanHeader} {`);
+                    output.push(...processLogic(line.body ? line.body.slice(1) : []));
+                    output.push(`}`);
+                }
+            } else if (line.type === 'must') {
+                output.push(`if (!(${line.expression.replace(/\$([a-zA-Z0-9_]+)/g, '$1.value')})) throw new Error("Component Assertion Failed: ${line.expression}");`);
             }
         });
         return output;
     };
 
     manifest.functions.forEach(f => {
-        const body = processLogic(f.body);
-        output.actions.push({ name: f.name, params: f.params || [], body });
+        if (f.name && f.body) {
+            const body = processLogic(f.body);
+            output.actions.push({ name: f.name, params: f.params || [], body });
+        }
     });
 
     // 3.1 Map Watchers
@@ -155,16 +166,16 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
         if (node.type === 'text') {
             let val = node.content.trim();
             const isReactive = /\$([a-zA-Z0-9_]+)/.test(val) || val.includes('.') || val.includes('(');
-            
+
             // Heuristic for pure expression: contains call/member and not wrapped in matching quotes
             const isWrapped = (val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"));
             const isExpression = isReactive && !isWrapped && (val.includes('.') || val.includes('('));
 
             if (isExpression) {
-                return { 
-                    type: 'text', 
-                    value: val.replace(/\$([a-zA-Z0-9_]+)/g, '$1.value'), 
-                    isReactive: true, 
+                return {
+                    type: 'text',
+                    value: val.replace(/\$([a-zA-Z0-9_]+)/g, '$1.value'),
+                    isReactive: true,
                     isExpression: true,
                     line: node.line
                 };
@@ -172,8 +183,29 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
 
             val = val.replace(/["']\s*\+\s*/g, '').replace(/\+\s*["']/g, '').replace(/["']/g, '');
             const template = val.replace(/\$([a-zA-Z0-9_]+)/g, '$\{ $1.value \}');
-            
+
             return { type: 'text', value: template, isReactive, line: node.line };
+        }
+
+        if (node.type === 'fragment') {
+            return {
+                type: 'fragment',
+                children: node.children.map(buildWidget).filter(w => w !== null) as ViandWidget[],
+                line: node.line
+            };
+        }
+
+        if (node.type === 'if') {
+            return {
+                type: 'match',
+                expression: node.condition.replace(/\$([a-z0-9_]+)/gi, '$1.value'),
+                cases: [{
+                    condition: 'true',
+                    children: node.children.map(buildWidget).filter(w => w !== null) as ViandWidget[]
+                }],
+                defaultCase: node.alternate ? [buildWidget(node.alternate)].filter(w => w !== null) as ViandWidget[] : undefined,
+                line: node.line
+            };
         }
 
         if (node.type === 'each') {
@@ -209,7 +241,7 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
 
         if (node.type === 'element') {
             const props: Record<string, string> = {};
-            
+
             Object.entries(node.attrs).forEach(([k, v]) => {
                 if (k.startsWith('on')) {
                     props[k] = v.replace('__VIAND_CALL__', '').replace(/\(\)$/, '');
@@ -241,7 +273,7 @@ export function generateSignalsJS(manifest: ComponentManifest): string {
     // DEBUG: Clone to avoid mutation issues
     const viewCopy = JSON.parse(JSON.stringify(manifest.view));
     const rootWidgets = viewCopy.map(buildWidget).filter((w: any) => w !== null) as ViandWidget[];
-    
+
     if (rootWidgets.length === 1) {
         output.view = rootWidgets[0];
     } else {

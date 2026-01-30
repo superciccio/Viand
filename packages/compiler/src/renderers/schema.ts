@@ -15,7 +15,7 @@ export interface ActionSchema {
     body: string[];
 }
 
-export type ViandWidget = 
+export type ViandWidget =
     | { type: 'element'; tag: string; isComponent?: boolean; ref?: string; props: Record<string, string>; children: ViandWidget[]; line?: number }
     | { type: 'text'; value: string; isReactive: boolean; isExpression?: boolean; line?: number }
     | { type: 'fragment'; children: ViandWidget[]; line?: number }
@@ -29,6 +29,13 @@ export interface ComponentOutput {
     props: { id: string; value: string }[];
     css?: string;
     lang?: Record<string, Record<string, string>>;
+    head?: {
+        title?: string;
+        meta?: Record<string, string>;
+        og?: Record<string, string>;
+        twitter?: Record<string, string>;
+        link?: Array<Record<string, string>>;
+    };
     refs: string[];
     apiBridge: string[];
     sqlBridge: string[];

@@ -1,4 +1,4 @@
-import { ComponentOutput, ViandWidget } from './schema.ts';
+import type { ComponentOutput, ViandWidget } from './schema.ts';
 
 /**
  * 🖨️ Viand JS Emitter
@@ -38,6 +38,10 @@ export function emitJS(output: ComponentOutput): string {
             code += `  window.viand.registerMock("sql", "${label}", ${data});\n`;
         });
         code += `}\n\n`;
+    }
+
+    if (output.head && Object.keys(output.head).length > 0) {
+        code += `export const __head = ${JSON.stringify(output.head, null, 2)};\n\n`;
     }
 
     code += `export function ${output.name}(__props = {}) {\n`;
@@ -128,11 +132,11 @@ export function emitJS(output: ComponentOutput): string {
         if (w.type === 'element') {
             const propsObj = { ...w.props };
             let childrenArr = w.children.map(printWidget);
-            
+
             const tag = w.isComponent ? w.tag : `"${w.tag}"`;
             const ref = w.ref ? `(v) => ${w.ref}.value = v` : `null`;
             const meta = `{ type: 'element', tag: ${tag}, line: ${w.line || 0} }`;
-            
+
             if (w.isComponent) {
                 return `h(${tag}, { "children": [${childrenArr.join(', ')}], ${Object.entries(propsObj).map(([k, v]) => `"${k}": ${v}`).join(', ')} }, [], ${ref}, ${meta})`;
             } else {

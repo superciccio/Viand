@@ -29,17 +29,17 @@ Viand is built to surgically remove the friction found in modern frameworks (Nex
 - [x] **TypeScript Refactor:** Port the compiler to TS.
 - [ ] **Error Resilience:** Smarter error messages with source-line indicators.
 
-## 🚩 Milestone 5.2: Integrated Native Testing [IN PROGRESS]
+## 🚩 Milestone 5.2: Integrated Native Testing [COMPLETED]
 - [x] **`test` Block:** Root-level container for test suites.
 - [x] **`must` Keyword:** Clean assertion syntax (e.g., `must find "button"`).
 - [x] **Pure JS Logic Testing:** In-memory state testing via reactive factories.
-- [ ] **Headless DOM verification:** (Migration to Signals-based JSDOM tests).
+- [x] **Headless DOM verification:** Functional `@ui` tests via Vitest + JSDOM.
 - [x] **Smoke Testing:** `viand verify` for automated health checks.
 
 ## 🚩 Milestone 6: Sibling Resource Awareness [COMPLETED]
 - [x] **SQL Sibling Scanning:** Look for `.sql` files matching component names.
 - [x] **Query Labeling:** Parse `-- label: name` markers in SQL files.
-- [x] **Resource Injection:** Make `sql.labelName()` available inside Viand functions.
+- [x] **Automated Mocking:** Built-in support for `mock:` data in sibling files.
 
 ## 🚩 Milestone 7: Advanced Composition (The Shell Pillar) [COMPLETED]
 - [x] **`slot:` keyword:** Support for Signals-based slots.
@@ -47,12 +47,13 @@ Viand is built to surgically remove the friction found in modern frameworks (Nex
 
 ## 🚩 Milestone 8: Global State (The Memory Pillar) [COMPLETED]
 - [x] **`memory` keyword:** Define shared reactive singletons.
-- [x] **Module Bridge:** Triple-file architecture ensuring 1:1 logic parity.
+- [x] **Module Bridge:** Standalone reactive modules with Signal-backed getters.
 - [x] **Smart Interpolation:** Automatic evaluation of global namespaces in views.
 
 ## 🚩 Milestone 9: Executive Routing (The Navigation Pillar) [COMPLETED]
 - [x] **`match router.path` logic:** A high-level declarative router syntax.
 - [x] **`router.goto()` action:** Built-in navigation primitive.
+- [x] **SPA Stability:** Focus-aware routing that preserves component state.
 
 ## 🚩 Milestone 10: Static HTML Generation (The SSG Pillar) [COMPLETED]
 - [x] **Zero-HTML Entry:** Generate full `index.html` documents directly from `.viand` files.

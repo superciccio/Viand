@@ -8,21 +8,23 @@ This roadmap tracks the development of the **Viand Standalone Engine**, moving a
 - [x] **DOM Painter:** Implement fine-grained `bind()` and `renderList()`.
 - [x] **Event Glue:** Declarative event listeners without the overhead.
 
-## 🔱 Phase 2: The Sibling Bridge
-- [ ] **SQL Ingestion:** Automatic embedding of `.sql` queries.
-- [ ] **API Ingestion:** Built-in HTTP proxying with mocking.
-- [ ] **Intl Ingestion:** Sibling-based multi-lingual support.
+## 🔱 Phase 2: The Sibling Bridge [COMPLETED]
+- [x] **Automated Mocks:** Inject `mock:` data from `.api` files into components.
+- [x] **Pluggable Drivers:** Define `viand.use()` to swap between Web, Mock, and Tauri.
+- [x] **Ref Signals:** Element references (#ref) that trigger reactive effects.
 
-## 🔱 Phase 3: The Architecture
-- [ ] **Composition:** Slots and Snippets for complex UIs.
-- [ ] **Executive Router:** Reactive path tracking for SPAs.
-- [ ] **Memory Pillar:** Global reactive singletons.
+## 🔱 Phase 3: The Architecture [COMPLETED]
+- [x] **Composition:** Support for `slot` and `children` prop passing.
+- [x] **Executive Router:** Standalone Signals-based SPA router.
+- [x] **Memory Pillar:** Module-based reactive singletons (getters/setters).
 
-## 🔱 Phase 4: The Oven (SSR)
-- [ ] **String Mode:** Non-DOM renderer for server-side HTML.
-- [ ] **Hydration:** Handshake protocol to wake up static pages.
+## 🔱 Phase 4: The Oven (SSR) [COMPLETED]
+- [x] **Static Generation:** `bake --ssr` command for pre-rendering HTML.
+- [x] **Style Collection:** SSR-compatible style mapping to avoid FOUC.
+- [x] **Hydration:** handoff between static HTML and reactive Signals.
 
 ## 🔱 Phase 5: The Lens (DX)
+- [x] **Head Management:** Declarative `head:` block for SEO and metadata.
 - [ ] **Ghost Mode:** 100% In-memory transformation in Vite.
 - [ ] **Source Maps:** 1:1 error mapping to `.viand` source.
 - [ ] **LSP Support:** Intelligent IDE features for the new foundation.

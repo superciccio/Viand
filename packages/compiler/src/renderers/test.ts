@@ -1,4 +1,4 @@
-import { ComponentManifest } from '../types.ts';
+import type { ComponentManifest } from '../types.ts';
 
 export function generateTests(manifest: ComponentManifest): string {
     let code = `import { describe, it, expect, beforeEach, vi } from 'vitest';\n`;
@@ -15,7 +15,7 @@ export function generateTests(manifest: ComponentManifest): string {
 
     manifest.tests.forEach(t => {
         code += `  it('${t.type} verification', async () => {\n`;
-        
+
         // Track SQL/API mocks to wrap them in viand.use
         const sqlMocks: Record<string, string> = {};
         const apiMocks: Record<string, string> = {};
@@ -92,7 +92,7 @@ export function generateTests(manifest: ComponentManifest): string {
                 useStr += `        return [];\n      },\n`;
             }
             useStr += `    });\n`;
-            
+
             // Insert it after it declaration
             code = code.replace(`it('${t.type} verification', async () => {\n`, `it('${t.type} verification', async () => {\n${useStr}`);
         }

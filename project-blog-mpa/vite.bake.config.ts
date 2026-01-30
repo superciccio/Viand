@@ -1,0 +1,1 @@
+import { defineConfig } from 'vite'; import userConfig from './vite.config'; import { resolve } from 'path'; export default defineConfig({ ...userConfig, root: '_viand_bake', build: { outDir: '../dist', emptyOutDir: true } });

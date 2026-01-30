@@ -2,6 +2,11 @@ use Shell from "./Shell.viand"
 use intl
 
 component About:
+    head:
+        title: "About Us - Viand Blog"
+        meta:
+            description: "Learn more about the Viand framework and its capabilities."
+    
     view:
         Shell:
             h1: intl.t('title')

@@ -3,7 +3,7 @@ import { buildManifest } from './parser.ts';
 import { generateTests } from './renderers/test.ts';
 import { generateSignalsJS } from './renderers/signals.ts';
 import { format } from './formatter.ts';
-import { ComponentManifest } from './types.ts';
+import type { ComponentManifest } from './types.ts';
 
 /**
  * Validates a manifest for language constraints.
@@ -17,11 +17,11 @@ export function validateManifest(manifest: ComponentManifest, filePath: string):
 /**
  * Full compilation process.
  */
-export function processViand(code: string, sqlSource: string = "", apiSource: string = "", langSource: string = "", filePath: string = ""): { tests: string, signals: string, manifest: any, reports: string[] } {
+export function processViand(code: string, sqlSource: string = "", apiSource: string = "", langSource: string = "", headSource: string = "", filePath: string = ""): { tests: string, signals: string, manifest: any, reports: string[] } {
     const { tokens, lexerErrors } = tokenize(code);
     const tree = analyzeHierarchy(tokens);
-    const { manifest, reports: parserReports } = buildManifest(tree, lexerErrors, sqlSource, apiSource, langSource);
-    
+    const { manifest, reports: parserReports } = buildManifest(tree, lexerErrors, sqlSource, apiSource, langSource, headSource);
+
     const validationErrors = validateManifest(manifest, filePath);
     const allReports = [...lexerErrors, ...parserReports, ...validationErrors];
 
@@ -33,10 +33,10 @@ export function processViand(code: string, sqlSource: string = "", apiSource: st
     };
 }
 
-export { 
-    tokenize, 
-    analyzeHierarchy, 
-    buildManifest, 
+export {
+    tokenize,
+    analyzeHierarchy,
+    buildManifest,
     generateTests,
     generateSignalsJS,
     format

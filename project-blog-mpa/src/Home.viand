@@ -1,6 +1,12 @@
 use Shell from "./Shell.viand"
 
 component Home:
+    head:
+        title: "Viand Blog - Home"
+        meta:
+            description: "A blog built with Viand framework"
+            keywords: "viand, blog, mpa"
+    
     view:
         Shell:
             h1: "Viand Multi-Page Blog"

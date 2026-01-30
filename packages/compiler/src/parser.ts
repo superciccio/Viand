@@ -1,5 +1,5 @@
 import * as acorn from 'acorn';
-import {
+import type {
     Token,
     ComponentManifest,
     ViewNode,
@@ -31,7 +31,7 @@ export function findSplitColon(text: string): number {
     let depth = 0, inQuote = false, quoteChar: string | null = null;
     for (let i = 0; i < text.length; i++) {
         const char = text[i];
-        if (inQuote) { if (char === quoteChar) inQuote = false; } 
+        if (inQuote) { if (char === quoteChar) inQuote = false; }
         else {
             if (char === '"' || char === "'") { inQuote = true; quoteChar = char; }
             else if (char === '(' || char === '{' || char === '[') depth++;
@@ -42,11 +42,11 @@ export function findSplitColon(text: string): number {
     return -1;
 }
 
-export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: string = "", apiSource: string = "", langSource: string = ""): { manifest: ComponentManifest, reports: string[] } {
+export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: string = "", apiSource: string = "", langSource: string = "", headSource: string = ""): { manifest: ComponentManifest, reports: string[] } {
     const manifest: ComponentManifest = {
         name: "Component",
         isMemory: false,
-        imports: [], props: [], state: [], reactive: [], functions: [], onMount: [], watch: [], refs: [], styles: [], view: [], tests: [], queries: [], api: [], lang: {}, slots: []
+        imports: [], props: [], state: [], reactive: [], functions: [], onMount: [], watch: [], refs: [], styles: [], view: [], tests: [], queries: [], api: [], lang: {}, head: {}, slots: []
     };
 
     if (sqlSource) {
@@ -125,12 +125,37 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 currentKey = key;
                 manifest.lang[currentKey] = {};
             } else if (currentKey) {
-                manifest.lang[currentKey][key] = val.replace(/^["'](.*)["']$/, '$1').trim();
+                manifest.lang[currentKey][key] = val.replace(/^["'](.*)["\']$/, '$1').trim();
             }
         });
     }
-    
-    const stack: any[] = [{ type: 'root', children: manifest.view, depth: -1 }]; 
+
+    if (headSource) {
+        const lines = headSource.split('\n');
+        let currentSection = "";
+        lines.forEach(line => {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) return;
+            const indentMatch = line.match(/^(\s*)/);
+            const indent = indentMatch ? indentMatch[0].length : 0;
+            const parts = trimmed.split(':');
+            const key = parts[0].trim();
+            const val = parts.slice(1).join(':').trim();
+
+            if (indent === 0) {
+                if (key === 'title') {
+                    manifest.head.title = val.replace(/^["'](.*)["\']$/, '$1').trim();
+                } else if (['meta', 'og', 'twitter'].includes(key)) {
+                    currentSection = key;
+                    if (!manifest.head[currentSection]) manifest.head[currentSection] = {};
+                }
+            } else if (currentSection && manifest.head[currentSection]) {
+                manifest.head[currentSection][key] = val.replace(/^["'](.*)["\']$/, '$1').trim();
+            }
+        });
+    }
+
+    const stack: any[] = [{ type: 'root', children: manifest.view, depth: -1 }];
 
     for (const token of tree) {
         const trimmed = token.content.trim();
@@ -218,7 +243,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
         if (token.type === 'FUNCTION_ACTION') {
             const m = trimmed.match(/fn\s+(\w+)\s*\((.*?)\)/);
             if (m) {
-                const f: ManifestFunction = { type: 'function', name: m[1], params: m[2].split(',').map(p=>p.trim()).filter(p=>p), body: [], depth: token.depth, line: token.line };
+                const f: ManifestFunction = { type: 'function', name: m[1], params: m[2].split(',').map(p => p.trim()).filter(p => p), body: [], depth: token.depth, line: token.line };
                 manifest.functions.push(f);
                 stack.push(f);
             }
@@ -259,6 +284,26 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             stack.push({ type: 'style', depth: token.depth });
             continue;
         }
+        if (token.type === 'HEAD_ROOT') {
+            stack.push({ type: 'head', depth: token.depth });
+            continue;
+        }
+        if (context.type === 'head' || context.type === 'head-section') {
+            const parts = trimmed.split(':');
+            const key = parts[0].trim();
+            const val = parts.slice(1).join(':').trim();
+
+            if (trimmed.endsWith(':')) {
+                const section = key;
+                if (!(manifest.head as any)[section]) (manifest.head as any)[section] = {};
+                stack.push({ type: 'head-section', section, depth: token.depth });
+            } else if (context.type === 'head-section') {
+                (manifest.head as any)[context.section][key] = val.replace(/^["'](.*)["']$/, '$1').trim();
+            } else if (key === 'title') {
+                manifest.head.title = val.replace(/^["'](.*)["']$/, '$1').trim();
+            }
+            continue;
+        }
         if (context.type === 'style' || context.type === 'style-rule') {
             if (trimmed.endsWith(':')) {
                 const rule: ManifestStyle = { selector: trimmed.slice(0, -1), rules: [], line: token.line };
@@ -292,7 +337,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 } else {
                     condition = trimmed.replace('case ', '').replace(':', '').trim();
                 }
-                const c = { condition, children: [] };
+                const c: { condition: string; children: ViewNode[] } = { condition, children: [] };
                 context.node.cases!.push(c);
                 stack.push({ type: 'view-node', children: c.children, depth: token.depth });
                 if (inline) {
@@ -306,7 +351,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 const splitIdx = findSplitColon(trimmed);
                 let inline = "";
                 if (splitIdx !== -1) inline = trimmed.slice(splitIdx + 1).trim();
-                const defaultNode = { children: [] };
+                const defaultNode: { children: ViewNode[] } = { children: [] };
                 context.node.defaultCase = defaultNode;
                 stack.push({ type: 'view-node', children: defaultNode.children, depth: token.depth });
                 if (inline) {
@@ -335,7 +380,7 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
             const idx = findSplitColon(trimmed);
             let declaration = "";
             let inline = "";
-            
+
             if (idx !== -1) {
                 // Heuristic: If the colon is part of an attribute (inside parens), it's not the split colon.
                 // findSplitColon already handles depth, so we trust it.

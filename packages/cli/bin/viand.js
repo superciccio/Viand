@@ -75,6 +75,7 @@ if (command === 'dev') {
     fs.mkdirSync(distEntries, { recursive: true });
 
     let ssrContentMap = {};
+    let ssrHeadMap = {};
     let collectedStyles = '';
 
     if (enableSSR) {
@@ -133,9 +134,11 @@ if (command === 'dev') {
                     const jsPath = path.join(tmpDir, file.replace('.viand', '.js'));
                     const module = await import('file://' + jsPath);
                     ssrContentMap[name] = module[name]();
+                    ssrHeadMap[name] = module.__head || {};
                 } catch (e) {
                     console.error(`❌ Failed to SSR ${name}:`, e);
                     ssrContentMap[name] = "";
+                    ssrHeadMap[name] = {};
                 }
             }
         }
@@ -157,9 +160,35 @@ if (command === 'dev') {
             if (!fs.existsSync(entryDir)) fs.mkdirSync(entryDir, { recursive: true });
 
             const ssrContent = enableSSR ? (ssrContentMap[name] || "") : "";
+            const headData = ssrHeadMap[name] || {};
+
+            let headTags = "";
+            if (headData.title) headTags += `<title>${headData.title}</title>`;
+            if (headData.meta) {
+                Object.entries(headData.meta).forEach(([k, v]) => {
+                    headTags += `<meta name="${k}" content="${v}">`;
+                });
+            }
+            if (headData.og) {
+                Object.entries(headData.og).forEach(([k, v]) => {
+                    headTags += `<meta property="og:${k}" content="${v}">`;
+                });
+            }
+            if (headData.twitter) {
+                Object.entries(headData.twitter).forEach(([k, v]) => {
+                    headTags += `<meta name="twitter:${k}" content="${v}">`;
+                });
+            }
+            if (headData.link) {
+                headData.link.forEach(l => {
+                    const attrs = Object.entries(l).map(([k, v]) => `${k}="${v}"`).join(' ');
+                    headTags += `<link ${attrs}>`;
+                });
+            }
+
             const staticHtml = `<div id="app">${ssrContent}</div>`;
             const styleTag = enableSSR && collectedStyles ? `<style>${collectedStyles}</style>` : '';
-            const html = `<!DOCTYPE html><html><head><title>Viand Baked: ${name}</title>${styleTag}</head><body>${staticHtml}<script type="module">import { mount } from "@viand/runtime"; import { ${name} } from "../src/${file}"; mount(document.getElementById("app"), () => ${name}());</script></body></html>`;
+            const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">${headTags}${!headData.title ? `<title>Viand Baked: ${name}</title>` : ''}${styleTag}</head><body>${staticHtml}<script type="module">import { mount } from "@viand/runtime"; import { ${name} } from "../src/${file}"; mount(document.getElementById("app"), () => ${name}());</script></body></html>`;
             fs.writeFileSync(path.join(entryDir, 'index.html'), html);
         }
     }
