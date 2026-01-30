@@ -6,6 +6,8 @@ export function generateLogicClass(manifest: ComponentManifest): string {
         let path = i.path;
         if (path === 'viand:router') {
             script += `import { router } from "./viand-router.svelte.ts";\n`;
+        } else if (path === 'viand:notify') {
+            script += `import { notify } from "./viand-notify.ts";\n`;
         } else if (path.endsWith('.viand')) {
             return; 
         } else {

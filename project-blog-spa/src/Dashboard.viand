@@ -1,13 +1,16 @@
 use { Chart } from "chart.js/auto"
+use notify
 
 component Dashboard:
     sync $analytics = api.getAnalytics()
 
+    fn refresh():
+        notify.info("Updating dashboard...")
+        notify.success("Dashboard is up to date!")
+
     on change $analytics:
         if $analytics && _.chartEl:
-            # Svelte 5 Fix: Use 'raw' to pass non-proxied data to Chart.js
             const data = raw $analytics
-            
             new Chart(_.chartEl, {
                 type: 'bar',
                 data: {
@@ -25,10 +28,14 @@ component Dashboard:
             })
 
     view:
-        h1 .text-3xl .font-bold .text-slate-800: "Analytics Dashboard"
-        p .text-slate-500 .mt-2: "Declarative Chart.js integration via sync, on change & raw."
+        div .flex .justify-between .items-center:
+            div:
+                h1 .text-3xl .font-bold .text-slate-800: "Analytics Dashboard"
+                p .text-slate-500 .mt-2: "Declarative Chart.js integration via sync & notify."
+            
+            button(class: "px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors") -> click(refresh()): 
+                "Refresh Now"
         
-                    div .mt-10 .p-8 .bg-white .rounded-2xl .shadow-xl .border .border-slate-100:
-                        div .h-80:
-                            canvas #chartEl
-        
+        div .mt-10 .p-8 .bg-white .rounded-2xl .shadow-xl .border .border-slate-100:
+            div .h-80:
+                canvas #chartEl

@@ -169,6 +169,10 @@ export function buildManifest(tree: Token[], lexerErrors: string[], sqlSource: s
                 manifest.imports.push({ name: 'router', path: 'viand:router' });
                 continue;
             }
+            if (trimmed === 'use notify') {
+                manifest.imports.push({ name: 'notify', path: 'viand:notify' });
+                continue;
+            }
             const m = trimmed.match(/use\s+(.+?)\s+from\s+["'](.*?)["']/);
             if (m) { manifest.imports.push({ name: m[1].replace(/[{}]/g, '').trim(), path: m[2] }); continue; }
             const m2 = trimmed.match(/use\s+(\w+)/);

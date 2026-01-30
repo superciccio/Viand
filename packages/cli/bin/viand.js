@@ -27,31 +27,12 @@ function preflight() {
     
     // Inject Standard Library (Router)
     const routerSrc = path.resolve(__dirname, '../../stdlib/src/router.svelte.ts');
-    const routerDest = path.join(srcDir, 'viand-router.svelte.ts'); // Note: Copied as .ts so Vite handles it? Or .svelte.ts
-    // Wait, Vite + Svelte 5 needs .svelte.ts extension for runes?
-    // My compiler generates imports to "./viand-router.svelte".
-    // Vite resolves .svelte to the file?
-    // Actually, if it's a TS file with runes, it should be .svelte.ts. 
-    // And import should be from .svelte.ts or .svelte?
-    // Svelte 5 docs say: .svelte.js/ts modules.
-    
-    // My compiler generates: import { router } from "./viand-router.svelte";
-    // This implies I should name the file `viand-router.svelte`? 
-    // No, that looks like a component.
-    // I should probably fix the compiler to import from `.svelte.ts`.
-    
-    // BUT for now, let's copy it to `viand-router.svelte.ts`.
-    // And if the import is wrong, I'll fix the compiler.
-    
-    // Let's assume compiler is wrong and fix it later if needed.
-    // Or maybe compiler generates import from `./viand-router.svelte` assuming resolving extensions?
-    
-    // Let's copy it.
-    if (fs.existsSync(routerSrc)) {
-        fs.copyFileSync(routerSrc, routerDest);
-    } else {
-        console.warn("⚠️  Warning: Standard Library Router not found at " + routerSrc);
-    }
+    const routerDest = path.join(srcDir, 'viand-router.svelte.ts');
+    if (fs.existsSync(routerSrc)) fs.copyFileSync(routerSrc, routerDest);
+
+    const notifySrc = path.resolve(__dirname, '../../stdlib/src/notify.ts');
+    const notifyDest = path.join(srcDir, 'viand-notify.ts');
+    if (fs.existsSync(notifySrc)) fs.copyFileSync(notifySrc, notifyDest);
 
     const files = fs.readdirSync(srcDir);
     files.forEach(file => {

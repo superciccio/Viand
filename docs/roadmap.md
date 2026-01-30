@@ -92,11 +92,16 @@ This document tracks the strategic development milestones for the Viand language
 - [ ] **Executive Formatting:** Automated indentation and syntax cleanup.
 - [ ] **Branding:** Properly register the 🌿 icon via File Icon Themes.
 
-## 🚩 Milestone 18: Strategic Hardening (The Fortress Pillar)
-**Goal:** Transition from prototype to reliable production toolkit.
-- [ ] **Compiler Stability:** Comprehensive gauntlet for `sync`, `on change`, and `raw`.
-- [ ] **CLI Refactor:** Transform the CLI into a standalone, installable binary.
-- [ ] **Error Resilience:** Smarter error messages with source-line indicators.
+## 🚩 Milestone 18: Strategic Hardening (The Iron Fortress)
+...
 
-## 🚩 Milestone 19: Universal Runtime (Browser Parity)
+## 🚩 Milestone 19: The Standard Library (The Pantry)
+**Goal:** Zero-setup modules for common production requirements.
+- [ ] **`use intl`**: Reactive translations, date/currency formatting.
+- [ ] **`use storage`**: Persistent reactive state (LocalStorage/SQLite).
+- [ ] **`use auth`**: Session management and route guarding.
+- [ ] **`use notify`**: Unified browser/native notification system.
+- [ ] **`use theme`**: Dark mode and system preference management.
+
+## 🚩 Milestone 20: Universal Runtime (Browser Parity)
 ...
