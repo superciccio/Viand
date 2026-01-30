@@ -34,3 +34,8 @@ This roadmap tracks the development of the **Viand Standalone Engine**, moving a
 - [ ] **Widget Map Recycling:** Use the `ViandWidget` tree to recycle DOM nodes across re-renders for maximum performance.
 - [ ] **Memory Hygiene:** Implement automatic cleanup/unsubscribing for effects and signal listeners.
 
+## 🔱 Phase 7: The Native Frontier (Tauri)
+- [ ] **Native Sidecars:** Declarative bridge logic for Rust-based system commands.
+- [ ] **System Signals:** Bind UI state to native OS events (battery, window focus, file system).
+- [ ] **Unified Build:** `viand bake --native` to produce cross-platform binaries.
+
