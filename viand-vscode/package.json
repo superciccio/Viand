@@ -4,17 +4,41 @@
   "description": "Syntax highlighting for the Viand Language",
   "version": "0.0.1",
   "publisher": "andrea",
-  "engines": { "vscode": "^1.70.0" },
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:viand"
+  ],
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node"
+  },
   "contributes": {
-    "languages": [{
-      "id": "viand",
-      "aliases": ["Viand", "viand"],
-      "extensions": [".viand"]
-    }],
-    "grammars": [{
-      "language": "viand",
-      "scopeName": "source.viand",
-      "path": "./syntaxes/viand.tmLanguage.json"
-    }]
+    "languages": [
+      {
+        "id": "viand",
+        "aliases": [
+          "Viand",
+          "viand"
+        ],
+        "extensions": [
+          ".viand"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "viand",
+        "scopeName": "source.viand",
+        "path": "./syntaxes/viand.tmLanguage.json"
+      }
+    ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.2"
   }
 }

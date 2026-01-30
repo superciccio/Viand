@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "node packages/cli/bin/viand.js dev",
     "build:compiler": "npm run build -w @viand/compiler",
+    "build:lsp": "npm run build --prefix packages/lsp",
+    "build:vscode": "npm run build --prefix viand-vscode",
     "test": "npm test --workspaces"
   },
   "devDependencies": {

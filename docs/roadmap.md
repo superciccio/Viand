@@ -79,4 +79,16 @@ This document tracks the strategic development milestones for the Viand language
 - [ ] **Dual-Mode Bridge:** Support for real fetch (with base URL overrides) and mocking in tests.
 
 ## 🚩 Milestone 16: Markdown Integration (The Content Pillar)
+**Goal:** Allow authoring content in pure Markdown inside Viand.
+- [ ] **`markdown:` block:** Support for standard MD with component embedding.
+- [ ] **Frontmatter Awareness:** Parse page metadata natively.
+
+## 🚩 Milestone 17: Developer Experience (The Lens Pillar)
+**Goal:** Professional IDE support for the Viand language.
+- [ ] **LSP Foundation:** Standalone Language Server using the official LSP protocol.
+- [ ] **Live Diagnostics:** Real-time syntax and indentation error reporting in the editor.
+- [ ] **Hover Support:** Show symbol definitions and documentation on hover.
+- [ ] **Executive Formatting:** Automated indentation and syntax cleanup.
+
+## 🚩 Milestone 18: Universal Runtime (Browser Parity)
 ...
