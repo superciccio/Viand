@@ -1,0 +1,9 @@
+component Counter:
+    $count = 0
+    fn add():
+        $count += 1
+
+    view:
+        h1: "Viand Signals Foundry"
+        p: "The count is " + $count
+        button -> click(add()): "Add One"

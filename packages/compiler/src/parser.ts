@@ -1,6 +1,4 @@
 import * as acorn from 'acorn';
-import { walk } from 'estree-walker';
-import { generate } from 'astring';
 import {
     Token,
     ComponentManifest,
@@ -14,29 +12,8 @@ const RUNES = ['state', 'derived', 'props', 'effect', 'inspect', 'host'];
 
 export function cleanLogic(code: string): string {
     if (!code || typeof code !== 'string') return code;
-    const preparedCode = code.replace(/\$([a-zA-Z0-9_]+)/g, '__VIAND_VAR_$1');
-
-    try {
-        const ast = acorn.parse(preparedCode, { 
-            ecmaVersion: 'latest', 
-            sourceType: 'module' 
-        }) as any;
-
-        walk(ast, {
-            enter(node: any) {
-                if (node.type === 'Identifier' && node.name.startsWith('__VIAND_VAR_')) {
-                    const originalName = node.name.replace('__VIAND_VAR_', '');
-                    node.name = RUNES.includes(originalName) ? '$' + originalName : originalName;
-                }
-            }
-        });
-
-        let result = generate(ast).trim();
-        if (result.endsWith(';') && !code.trim().endsWith(';')) result = result.slice(0, -1);
-        return result;
-    } catch (e) {
-        return code.replace(/\$([a-zA-Z0-9_]+)/g, (match, p1) => RUNES.includes(p1) ? match : p1);
-    }
+    // Simple fallback logic cleaning
+    return code.replace(/\$([a-zA-Z0-9_]+)/g, (match, p1) => RUNES.includes(p1) ? match : p1);
 }
 
 export function cleanViandText(text: string): string {
