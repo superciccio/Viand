@@ -111,8 +111,10 @@ export function renderList(listSignal: any, itemTemplate: (item: any) => HTMLEle
   effect(() => {
     const list = listSignal.value || [];
     const newElements: HTMLElement[] = [];
+    const seen = new Set();
     
     list.forEach((item: any) => {
+        seen.add(item);
         let el = elementMap.get(item);
         if (!el) {
             el = itemTemplate({ value: item });
@@ -121,7 +123,12 @@ export function renderList(listSignal: any, itemTemplate: (item: any) => HTMLEle
         newElements.push(el);
     });
 
-    // Stable Reconciler: replaceChildren is more efficient than innerHTML=''
+    // Cleanup stale elements
+    for (const item of elementMap.keys()) {
+        if (!seen.has(item)) elementMap.delete(item);
+    }
+
+    // Stable Reconciler
     container.replaceChildren(...newElements);
   });
   return container;
