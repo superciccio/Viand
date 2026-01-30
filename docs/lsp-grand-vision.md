@@ -29,6 +29,11 @@ Because Viand is indentation-based, the LSP must be smarter than average:
 - **Missing Sibling Warn:** "Warning: `sql.getUser` is called but `Home.sql` is missing or the label is undefined."
 - **Prop Validation:** "Error: `Button` expects a `label` prop, but none was provided."
 
+### f. Attribute Spread Intelligence
+With the introduction of the `spread:` keyword, the LSP becomes even more critical:
+- **Ark UI Type-Mapping:** If you spread a Zag/Ark object, the LSP should know which attributes are being applied and offer "Go to Machine Definition" shortcuts.
+- **Safety Checks:** Show warnings if the object being spread contains invalid or conflicting attributes (e.g., spreading two objects that both define `onClick`).
+
 ## 🛠️ 2. What Do We Need to Achieve This?
 
 To build this level of intelligence, we need more than a basic parser.
