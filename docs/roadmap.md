@@ -44,10 +44,10 @@ This document tracks the strategic development milestones for the Viand language
 - [x] **Shared Brains:** Triple-file architecture ensuring 1:1 logic parity.
 - [x] **Smart Interpolation:** Automatic evaluation of global namespaces in views.
 
-## 🚩 Milestone 9: Executive Routing (The Navigation Pillar)
+## 🚩 Milestone 9: Executive Routing (The Navigation Pillar) [COMPLETED]
 **Goal:** Build multi-page SPAs and Blogs natively.
-- [ ] **`page-router` block:** A high-level declarative router syntax.
-- [ ] **`goto()` action:** Built-in navigation primitive.
+- [x] **`match router.path` logic:** A high-level declarative router syntax.
+- [x] **`router.goto()` action:** Built-in navigation primitive.
 
 ## 🚩 Milestone 10: Static HTML Generation (The SSG Pillar) [COMPLETED]
 **Goal:** Turn Viand into a Page-First DSL (Jekyll/Hugo style).
@@ -72,11 +72,11 @@ This document tracks the strategic development milestones for the Viand language
 - [x] **`on mount:` block:** Dedicated lifecycle logic for library initialization.
 - [x] **NPM Import Support:** Support for named and default imports from `node_modules`.
 
-## 🚩 Milestone 15: The API Pillar (HTTP Siblings)
+## 🚩 Milestone 15: The API Pillar (HTTP Siblings) [COMPLETED]
 **Goal:** Clean, declarative HTTP communication with full testability.
-- [ ] **`.api` Sibling Scanning:** Detect and parse component-matched HTTP definitions.
-- [ ] **Declarative HTTP Logic:** Define headers, query, and body using Viand indentation.
-- [ ] **Dual-Mode Bridge:** Support for real fetch (with base URL overrides) and mocking in tests.
+- [x] **`.api` Sibling Scanning:** Detect and parse component-matched HTTP definitions.
+- [x] **Declarative HTTP Logic:** Define headers, query, and mock using Viand indentation.
+- [x] **Dual-Mode Bridge:** Support for real fetch (with base URL overrides) and mocking in logic.
 
 ## 🚩 Milestone 16: Markdown Integration (The Content Pillar)
 **Goal:** Allow authoring content in pure Markdown inside Viand.
@@ -85,10 +85,18 @@ This document tracks the strategic development milestones for the Viand language
 
 ## 🚩 Milestone 17: Developer Experience (The Lens Pillar)
 **Goal:** Professional IDE support for the Viand language.
-- [ ] **LSP Foundation:** Standalone Language Server using the official LSP protocol.
+- [x] **LSP Foundation:** Standalone Language Server using the official LSP protocol.
+- [ ] **LSP Connectivity Fix:** Bundle the server code into the VS Code extension for VSIX compatibility.
 - [ ] **Live Diagnostics:** Real-time syntax and indentation error reporting in the editor.
-- [ ] **Hover Support:** Show symbol definitions and documentation on hover.
+- [ ] **Hover & Autocomplete:** Show symbol definitions and documentation (Verify Protocol).
 - [ ] **Executive Formatting:** Automated indentation and syntax cleanup.
+- [ ] **Branding:** Properly register the 🌿 icon via File Icon Themes.
 
-## 🚩 Milestone 18: Universal Runtime (Browser Parity)
+## 🚩 Milestone 18: Strategic Hardening (The Fortress Pillar)
+**Goal:** Transition from prototype to reliable production toolkit.
+- [ ] **Compiler Stability:** Comprehensive gauntlet for `sync`, `on change`, and `raw`.
+- [ ] **CLI Refactor:** Transform the CLI into a standalone, installable binary.
+- [ ] **Error Resilience:** Smarter error messages with source-line indicators.
+
+## 🚩 Milestone 19: Universal Runtime (Browser Parity)
 ...

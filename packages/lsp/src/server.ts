@@ -96,6 +96,22 @@ connection.onHover(params => {
 			}
 		};
 	}
+    if (word === 'mount') {
+		return {
+			contents: {
+				kind: 'markdown',
+				value: '🏗️ **On Mount**\nRuns once when the component is first added to the DOM. Use this for initializing third-party libraries (like Charts) or adding global event listeners.'
+			}
+		};
+	}
+    if (word === 'change') {
+		return {
+			contents: {
+				kind: 'markdown',
+				value: '🔄 **On Change**\nA reactive watcher. Runs whenever the specified dependency (variable or ref) changes. Replaces traditional "effects" with a declarative, safe alternative.'
+			}
+		};
+	}
 
 	return null;
 });
